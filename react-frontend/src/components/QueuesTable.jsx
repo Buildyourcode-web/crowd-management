@@ -3,8 +3,8 @@ import React from 'react';
 function QueueDot({ movement }) {
   const m = (movement || '').toLowerCase().trim();
   if (m === 'very slow' || m === 'veryslow') return { dotClass: 'dot-orange', label: 'Very Slow' };
-  if (m === 'slow')                           return { dotClass: 'dot-yellow', label: 'Slow' };
-  if (m === 'stopped' || m === 'blocked')     return { dotClass: 'dot-red',    label: 'Stopped' };
+  if (m === 'slow')                           return { dotClass: 'dot-blue',   label: 'Slow' };
+  if (m === 'stopped' || m === 'blocked' || m === 'stagnant') return { dotClass: 'dot-red', label: 'Stopped' };
   if (m === 'empty')                          return { dotClass: 'dot-grey',   label: 'Empty' };
   return { dotClass: 'dot-green', label: 'Moving' };
 }

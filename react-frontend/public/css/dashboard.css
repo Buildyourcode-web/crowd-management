@@ -616,6 +616,7 @@ body {
 }
 
 .status-dot.dot-green { background-color: #22c55e; }
+.status-dot.dot-blue { background-color: #3b82f6; }
 .status-dot.dot-yellow { background-color: #eab308; }
 .status-dot.dot-orange { background-color: #f97316; }
 .status-dot.dot-red { background-color: #ef4444; }

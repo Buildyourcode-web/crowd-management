@@ -24,8 +24,40 @@ const camApi = axios.create({
 
 // ── Dashboard ───────────────────────────────────────────────────────────────
 export async function fetchDashboardData() {
-  const res = await api.get('/dashboard');
-  return res.data;
+  try {
+    let data = { success: true, summary: {}, zones: [], gates: [], queues: [], hourly_trend: [] };
+    try {
+      const res = await api.get('/crowd-data');
+      if (res.data) data = { ...data, ...res.data };
+    } catch {
+      /* fallback if /crowd-data not present */
+    }
+
+    // Always fetch real-time queue status directly from FastAPI /api/v1/queue/status
+    try {
+      const qRes = await api.get('/queue/status');
+      if (qRes.data && qRes.data.data && Array.isArray(qRes.data.data.cameras)) {
+        data.queues = qRes.data.data.cameras.map((c, i) => {
+          let m = (c.queue_health || 'MOVING').toLowerCase();
+          if (c.stagnation_seconds > 0 || c.stagnation_label === 'BLOCKED' || c.stagnation_label === 'CRITICAL') {
+            m = 'stopped';
+          }
+          return {
+            queue_number: `Queue ${i + 1}`,
+            wait_minutes: Math.max(0, Math.round((c.stagnation_seconds || 0) / 60)),
+            movement: m,
+          };
+        });
+      }
+    } catch (e) {
+      /* ignore if no queue workers active */
+    }
+
+    return data;
+  } catch (error) {
+    console.error('fetchDashboardData Error:', error);
+    return { success: false, queues: [] };
+  }
 }
 
 // ── Notifications ───────────────────────────────────────────────────────────
