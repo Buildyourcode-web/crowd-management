@@ -19,9 +19,9 @@ echo [2/3] Starting FastAPI Backend (port 8000)...
 start "FastAPI Backend" cmd /k "cd /d C:\crowd_management_backend\backend && venv\Scripts\activate && venv\Scripts\uvicorn.exe app.main:app --host 0.0.0.0 --port 8000 --reload"
 timeout /t 5 /nobreak >nul
 
-REM ── Step 3: Start Laravel Frontend ────────────
-echo [3/3] Starting Laravel Frontend (port 8088)...
-start "Laravel Frontend" cmd /k "cd /d C:\crowd_management_backend\frontend && C:\xampp\php\php.exe artisan serve --host=0.0.0.0 --port=8088"
+REM ── Step 3: Start React Frontend ──────────────
+echo [3/3] Starting React Frontend (port 3000)...
+start "React Frontend" cmd /k "cd /d C:\crowd_management_backend\react-frontend && npm run dev"
 timeout /t 3 /nobreak >nul
 
 echo.
@@ -31,7 +31,7 @@ echo.
 echo   Redis            : localhost:6379
 echo   FastAPI Backend  : http://127.0.0.1:8000
 echo   API Docs (Swagger): http://127.0.0.1:8000/docs
-echo   Laravel Frontend : http://127.0.0.1:8088
+echo   React Frontend   : http://localhost:3000
 echo ===============================================
 echo.
 pause
