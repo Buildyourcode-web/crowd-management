@@ -167,6 +167,16 @@ export default function Cameras() {
       };
     }
 
+    if (idx === 2) {
+      return {
+        id: '33333333-3333-4333-a333-333333333333',
+        name: 'Entry Counter Camera 3',
+        stream_url: '/api/v1/cameras/33333333-3333-4333-a333-333333333333/stream',
+        zone_name: 'Main Gate Entrance 3',
+        camera_type: 'ENTRY',
+      };
+    }
+
     if (existing) return existing;
 
     return {
