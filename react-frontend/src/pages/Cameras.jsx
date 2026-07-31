@@ -8,9 +8,10 @@ const CAM_BASE = import.meta.env.VITE_CAMERAS_API_URL || 'http://127.0.0.1:8001/
  * Camera card – identical to the inline template in cameras.blade.php
  */
 function CameraCard({ cam, onZoom }) {
-  const isQueueCam = String(cam.id || cam.camera_id || '').includes('4e09b542');
+  const cid = String(cam.id || cam.camera_id || '');
+  const isQueueCam = cid.includes('4e09b542') || cid.includes('67676767') || cam.camera_type === 'QUEUE';
   const streamSrc  = isQueueCam
-    ? 'http://127.0.0.1:8000/api/v1/cameras/4e09b542-98b1-4974-9e6c-8f3a8c3d7f0a/queue-stream'
+    ? `/api/v1/cameras/${cam.id || cam.camera_id}/queue-stream`
     : (cam.stream_url || `${CAM_BASE}/cameras/${cam.id || cam.camera_id}/stream`);
 
   const camName   = cam.name  || cam.camera_name  || `Camera ${cam.id || ''}`;
@@ -26,7 +27,7 @@ function CameraCard({ cam, onZoom }) {
     <div
       className="camera-card"
       id={`camera-card-${cam.id || '1'}`}
-      onClick={() => onZoom(camName, streamSrc, isQueueCam)}
+      onClick={() => onZoom(camName, streamSrc, cam.id || cam.camera_id, isQueueCam)}
     >
       <div className="camera-video-container">
         <img
@@ -57,7 +58,7 @@ function CameraCard({ cam, onZoom }) {
 /**
  * Fullscreen CCTV zoom modal – replicates the cctv-zoom-modal in cameras.blade.php
  */
-function CctvZoomModal({ isOpen, cameraName, streamSrc, isQueueCam, onClose }) {
+function CctvZoomModal({ isOpen, cameraName, streamSrc, camId, isQueueCam, onClose }) {
   const [timeStr, setTimeStr] = useState(() => new Date().toLocaleTimeString());
   useEffect(() => {
     if (!isOpen) return;
@@ -73,7 +74,8 @@ function CctvZoomModal({ isOpen, cameraName, streamSrc, isQueueCam, onClose }) {
 
   if (!isOpen) return null;
 
-  const isQueue = Boolean(isQueueCam) || (streamSrc || '').includes('4e09b542') || (streamSrc || '').includes('queue');
+  const isQueue = Boolean(isQueueCam) || (streamSrc || '').includes('queue') || (camId || '').includes('4e09b542') || (camId || '').includes('67676767');
+  const viewerUrl = `/api/v1/cameras/${camId || '4e09b542-98b1-4974-9e6c-8f3a8c3d7f0a'}/queue-viewer`;
 
   return (
     <div
@@ -85,8 +87,8 @@ function CctvZoomModal({ isOpen, cameraName, streamSrc, isQueueCam, onClose }) {
       <div className="zoom-content-wrapper" onClick={e => e.stopPropagation()} style={{ width: '96vw', height: '94vh', padding: 0, borderRadius: '14px', overflow: 'hidden' }}>
         {isQueue ? (
           <iframe
-            src="/api/v1/cameras/4e09b542-98b1-4974-9e6c-8f3a8c3d7f0a/queue-viewer"
-            title="Queue Monitor — 5-Level Live Viewer"
+            src={viewerUrl}
+            title={`${cameraName} — 5-Level Live Viewer`}
             style={{ width: '100%', height: '100%', border: 'none' }}
           />
         ) : (
@@ -122,7 +124,7 @@ export default function Cameras() {
   const [cameras, setCameras] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(false);
-  const [zoomCam, setZoomCam] = useState(null); // { name, src, isQueueCam }
+  const [zoomCam, setZoomCam] = useState(null); // { name, src, camId, isQueueCam }
 
   const loadCameras = useCallback(async () => {
     setLoading(true);
@@ -144,30 +146,28 @@ export default function Cameras() {
   const displayCameras = Array.from({ length: TOTAL_SCREENS }, (_, idx) => {
     const existing = cameras[idx];
 
-    // If API returned a camera for this slot
-    if (existing) {
-      const isQueueCam = String(existing.id || existing.camera_id || '').includes('4e09b542');
-      if (isQueueCam) {
-        return {
-          ...existing,
-          id: '4e09b542-98b1-4974-9e6c-8f3a8c3d7f0a',
-          name: existing.camera_name || existing.name || 'Queue Monitor — 4e09b542',
-          stream_url: 'http://127.0.0.1:8000/api/v1/cameras/4e09b542-98b1-4974-9e6c-8f3a8c3d7f0a/queue-stream',
-          zone_name: 'Main Queue Pathway',
-        };
-      }
-      return existing;
-    }
-
     // Default slots for 12 CCTV screens
     if (idx === 0) {
       return {
         id: '4e09b542-98b1-4974-9e6c-8f3a8c3d7f0a',
-        name: 'Queue Monitor — 4e09b542',
-        stream_url: 'http://127.0.0.1:8000/api/v1/cameras/4e09b542-98b1-4974-9e6c-8f3a8c3d7f0a/queue-stream',
-        zone_name: 'Main Queue Pathway',
+        name: 'Queue Monitor 1 — 4e09b542',
+        stream_url: '/api/v1/cameras/4e09b542-98b1-4974-9e6c-8f3a8c3d7f0a/queue-stream',
+        zone_name: 'Main Queue Pathway 1',
+        camera_type: 'QUEUE',
       };
     }
+
+    if (idx === 1) {
+      return {
+        id: '67676767-6767-4e67-a676-676767676767',
+        name: 'Queue Monitor 2 — 67676767',
+        stream_url: '/api/v1/cameras/67676767-6767-4e67-a676-676767676767/queue-stream',
+        zone_name: 'Main Queue Pathway 2',
+        camera_type: 'QUEUE',
+      };
+    }
+
+    if (existing) return existing;
 
     return {
       id: `cam-slot-${idx + 1}`,
@@ -220,7 +220,7 @@ export default function Cameras() {
             <CameraCard
               key={cam.id || `cam-${idx}`}
               cam={cam}
-              onZoom={(name, src) => setZoomCam({ name, src })}
+              onZoom={(name, src, cid, isQueue) => setZoomCam({ name, src, camId: cid, isQueueCam: isQueue })}
             />
           ))}
         </div>
@@ -231,6 +231,8 @@ export default function Cameras() {
         isOpen={!!zoomCam}
         cameraName={zoomCam?.name || ''}
         streamSrc={zoomCam?.src  || ''}
+        camId={zoomCam?.camId || ''}
+        isQueueCam={zoomCam?.isQueueCam || false}
         onClose={() => setZoomCam(null)}
       />
     </DashboardLayout>
