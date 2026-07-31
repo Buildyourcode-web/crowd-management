@@ -99,10 +99,10 @@ function CctvZoomModal({ isOpen, cameraName, streamSrc, onClose }) {
  * Includes all inline CSS from that file via a <style> tag.
  */
 export default function Cameras() {
-  const [cameras, setCameras]       = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState(false);
-  const [zoomCam, setZoomCam]       = useState(null);   // { name, src }
+  const [cameras, setCameras] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState(false);
+  const [zoomCam, setZoomCam] = useState(null); // { name, src }
 
   const loadCameras = useCallback(async () => {
     setLoading(true);
@@ -119,19 +119,55 @@ export default function Cameras() {
 
   useEffect(() => { loadCameras(); }, [loadCameras]);
 
-  const countLabel = loading ? 'Loading...' : `${cameras.length} ${cameras.length === 1 ? 'Feed' : 'Feeds'}`;
+  // Construct 12 total CCTV camera slots
+  const TOTAL_SCREENS = 12;
+  const displayCameras = Array.from({ length: TOTAL_SCREENS }, (_, idx) => {
+    const existing = cameras[idx];
+
+    // If API returned a camera for this slot
+    if (existing) {
+      const isQueueCam = String(existing.id || existing.camera_id || '').includes('4e09b542');
+      if (isQueueCam) {
+        return {
+          ...existing,
+          id: '4e09b542-98b1-4974-9e6c-8f3a8c3d7f0a',
+          name: existing.camera_name || existing.name || 'Queue Monitor — 4e09b542',
+          stream_url: 'http://localhost:8000/api/v1/cameras/4e09b542-98b1-4974-9e6c-8f3a8c3d7f0a/queue-mjpeg',
+          zone_name: 'Main Queue Pathway',
+        };
+      }
+      return existing;
+    }
+
+    // Default slots for 12 CCTV screens
+    if (idx === 0) {
+      return {
+        id: '4e09b542-98b1-4974-9e6c-8f3a8c3d7f0a',
+        name: 'Queue Monitor — 4e09b542',
+        stream_url: 'http://localhost:8000/api/v1/cameras/4e09b542-98b1-4974-9e6c-8f3a8c3d7f0a/queue-mjpeg',
+        zone_name: 'Main Queue Pathway',
+      };
+    }
+
+    return {
+      id: `cam-slot-${idx + 1}`,
+      name: `CCTV Camera ${String(idx + 1).padStart(2, '0')}`,
+      stream_url: '/images/detection-placeholder.jpg',
+      zone_name: `Zone ${String(Math.floor(idx / 3) + 1).padStart(2, '0')}`,
+    };
+  });
 
   return (
     <DashboardLayout pageTitle="AI Crowd Management Dashboard">
-      {/* Inline styles from cameras.blade.php */}
       <style>{`
         .cctv-wall-section { padding: 0 24px; margin-top: 20px; }
         .cameras-grid { display: grid; grid-template-columns: repeat(4, 1fr) !important; gap: 20px; margin-bottom: 24px; }
-        @media (max-width: 1200px) { .cameras-grid { grid-template-columns: repeat(2, 1fr) !important; } }
-        @media (max-width: 600px)  { .cameras-grid { grid-template-columns: 1fr !important; } }
+        @media (max-width: 1200px) { .cameras-grid { grid-template-columns: repeat(3, 1fr) !important; } }
+        @media (max-width: 800px)  { .cameras-grid { grid-template-columns: repeat(2, 1fr) !important; } }
+        @media (max-width: 500px)  { .cameras-grid { grid-template-columns: 1fr !important; } }
         .camera-card { background-color: #0b0f19; border-radius: var(--border-radius-lg); border: 1px solid rgba(51,65,85,.45) !important; overflow: hidden; position: relative; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,.25) !important; transition: transform .25s cubic-bezier(.4,0,.2,1), border-color .25s !important; }
         .camera-card:hover { transform: scale(1.025); border-color: rgba(34,197,94,.5) !important; }
-        .camera-video-container { width: 100%; height: 200px; background-color: #000; position: relative; overflow: hidden; }
+        .camera-video-container { width: 100%; height: 210px; background-color: #000; position: relative; overflow: hidden; }
         .camera-video-placeholder { width: 100%; height: 100%; object-fit: cover; opacity: 1; transition: opacity .3s; }
         .camera-scanner-overlay { display: none; }
         .camera-scanline { display: none; }
@@ -139,48 +175,30 @@ export default function Cameras() {
         .camera-rec-dot { display: flex; align-items: center; gap: 6px; text-transform: uppercase; }
         .rec-dot { width: 7px; height: 7px; border-radius: 50%; background-color: #ef4444; display: inline-block; animation: cctv-blink 1s infinite alternate; }
         @keyframes cctv-blink { 0% { opacity: .2; } 100% { opacity: 1; } }
-        .camera-name-overlay { position: absolute; bottom: 12px; left: 12px; color: #22c55e; font-family: monospace; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px #000; z-index: 4; letter-spacing: .5px; }
-        .cctv-zoom-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: #000; z-index: 99999; display: none; justify-content: center; align-items: center; opacity: 0; transition: opacity .2s ease-in-out; }
+        .camera-name-overlay { position: absolute; bottom: 12px; left: 12px; color: #22c55e; font-family: monospace; font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px #000; z-index: 4; letter-spacing: .5px; background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 4px; }
+        .cctv-zoom-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0,0,0,0.95); z-index: 99999; display: none; justify-content: center; align-items: center; opacity: 0; transition: opacity .2s ease-in-out; }
         .cctv-zoom-modal.active { display: flex; opacity: 1; }
-        .zoom-content-wrapper { position: relative; width: 100vw; height: 100vh; background-color: #000; overflow: hidden; transform: scale(1); }
-        .zoomed-camera-img { width: 100%; height: 100%; object-fit: cover; }
-        .btn-close-zoom { position: absolute; top: 24px; right: 32px; background: rgba(15,23,42,.7); border: 1px solid rgba(255,255,255,.2); border-radius: 50%; width: 48px; height: 48px; color: #fff; font-size: 28px; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 100000; transition: background-color .2s; }
+        .zoom-content-wrapper { position: relative; width: 95vw; height: 90vh; background-color: #000; border-radius: 12px; overflow: hidden; border: 1px solid #1e293b; box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
+        .zoomed-camera-img { width: 100%; height: 100%; object-fit: contain; }
+        .btn-close-zoom { position: absolute; top: 24px; right: 32px; background: rgba(15,23,42,.8); border: 1px solid rgba(255,255,255,.3); border-radius: 50%; width: 48px; height: 48px; color: #fff; font-size: 28px; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 100000; transition: background-color .2s; }
         .btn-close-zoom:hover { background-color: #ef4444; }
         .zoomed-camera-name { font-family: monospace; font-weight: bold; font-size: 14px; letter-spacing: .5px; color: #22c55e; text-shadow: 1px 1px 2px #000; }
       `}</style>
 
       <section className="cctv-wall-section">
-        <h2 className="section-title" style={{ marginBottom: '20px' }}>
-          <i className="fa-solid fa-shield-halved"></i> Live CCTV Video Wall (
-          <span id="cctv-count-label">{countLabel}</span>)
-        </h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h2 className="section-title" style={{ margin: 0 }}>
+            <i className="fa-solid fa-shield-halved" style={{ color: '#22c55e', marginRight: '8px' }}></i> Live CCTV Video Wall (12 Screens)
+          </h2>
+          <span style={{ fontSize: '12px', color: '#94a3b8', background: '#0b0f19', padding: '6px 12px', borderRadius: '6px', border: '1px solid #1e293b' }}>
+            <i className="fa-solid fa-expand" style={{ marginRight: '6px' }}></i> Click any screen to maximize
+          </span>
+        </div>
 
         <div className="cameras-grid" id="cameras-grid-container">
-          {loading && (
-            <div style={{ gridColumn: '1/-1', textAlign: 'center', color: '#94a3b8', padding: '40px' }}>
-              <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '32px', marginBottom: '12px', color: '#3b82f6', display: 'block' }}></i>
-              <p style={{ fontSize: '14px', fontWeight: 500 }}>Connecting to FastAPI AI Engine and loading live camera streams...</p>
-            </div>
-          )}
-
-          {!loading && error && (
-            <div style={{ gridColumn: '1/-1', textAlign: 'center', color: '#ef4444', padding: '36px', background: '#0b0f19', borderRadius: '12px', border: '1px solid #7f1d1d' }}>
-              <i className="fa-solid fa-triangle-exclamation" style={{ fontSize: '36px', marginBottom: '10px', display: 'block' }}></i>
-              <p style={{ fontSize: '14px', fontWeight: 600 }}>Unable to load camera feeds from AI backend.</p>
-            </div>
-          )}
-
-          {!loading && !error && cameras.length === 0 && (
-            <div style={{ gridColumn: '1/-1', textAlign: 'center', color: '#94a3b8', padding: '48px', background: '#0b0f19', borderRadius: '12px', border: '1px solid #1e293b' }}>
-              <i className="fa-solid fa-video-slash" style={{ fontSize: '42px', marginBottom: '12px', color: '#64748b', display: 'block' }}></i>
-              <h3 style={{ fontSize: '16px', color: '#f8fafc', fontWeight: 700, marginBottom: '6px' }}>No Active Live Cameras Found</h3>
-              <p style={{ fontSize: '13px', color: '#64748b' }}>Connect an RTSP camera stream or register a CCTV camera to stream live AI detections.</p>
-            </div>
-          )}
-
-          {!loading && !error && cameras.map(cam => (
+          {displayCameras.map((cam, idx) => (
             <CameraCard
-              key={cam.id || cam.camera_id || Math.random()}
+              key={cam.id || `cam-${idx}`}
               cam={cam}
               onZoom={(name, src) => setZoomCam({ name, src })}
             />
@@ -188,7 +206,7 @@ export default function Cameras() {
         </div>
       </section>
 
-      {/* Fullscreen zoom modal */}
+      {/* Fullscreen MAXIMIZE zoom modal */}
       <CctvZoomModal
         isOpen={!!zoomCam}
         cameraName={zoomCam?.name || ''}
