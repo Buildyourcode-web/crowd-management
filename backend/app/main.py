@@ -10,6 +10,7 @@ from app.api.v1.router import api_v1_router
 from app.ai.gpu import log_gpu_info
 from app.ai.model_manager import model_manager
 from app.camera.camera_manager import camera_manager
+from app.queue_management.manager import queue_manager
 from app.common.constants import REDIS_CHANNEL_SYSTEM
 from app.config.settings import settings
 from app.core.exception_handlers import register_exception_handlers
@@ -161,11 +162,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # ── Auto-start Queue Workers for all active Queue cameras in DB ────────────
     try:
-        from app.camera.manager import camera_manager
-        from app.queue_management.manager import queue_manager
         from app.models.roi import ROI
         from app.models.camera import Camera
-        from app.common.enums import ROIType
+        from app.common.enums import ROIType, CameraType
         from app.queue_management.roi import QueueROI
         from sqlalchemy import select
 
@@ -175,8 +174,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
             for cam_obj in cams:
                 if cam_obj.camera_type == CameraType.QUEUE or str(cam_obj.id).startswith("4e09b542") or str(cam_obj.id).startswith("67676767"):
-                    await camera_manager.start_stream(cam_obj)
-
                     res_r = await session.execute(select(ROI).where(ROI.camera_id == cam_obj.id))
                     rois = res_r.scalars().all()
                     q_roi_obj = None
