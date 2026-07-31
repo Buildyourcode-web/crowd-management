@@ -33,6 +33,25 @@ export async function fetchDashboardData() {
       /* fallback if /crowd-data not present */
     }
 
+    // Fetch real-time person-counter status directly from FastAPI /api/v1/person-counter/status for Gate wise Entry/Exit table
+    try {
+      const pcRes = await api.get('/person-counter/status');
+      if (pcRes.data && pcRes.data.data && Array.isArray(pcRes.data.data.cameras)) {
+        const activeGates = pcRes.data.data.cameras.map((c, i) => ({
+          gate_number: String(c.camera_id).includes('33333333') ? 'Gate 3' : `Gate ${i + 1}`,
+          entries: c.entry_count || 0,
+          exits: c.exit_count || 0,
+          status: c.worker_running ? 'normal' : 'warning',
+        }));
+
+        if (activeGates.length > 0) {
+          data.gates = activeGates;
+        }
+      }
+    } catch (e) {
+      /* fallback if no person counters active */
+    }
+
     // Always fetch real-time queue status directly from FastAPI /api/v1/queue/status
     try {
       const qRes = await api.get('/queue/status');
@@ -56,7 +75,7 @@ export async function fetchDashboardData() {
     return data;
   } catch (error) {
     console.error('fetchDashboardData Error:', error);
-    return { success: false, queues: [] };
+    return { success: false, queues: [], gates: [] };
   }
 }
 
