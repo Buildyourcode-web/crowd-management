@@ -33,19 +33,20 @@ export async function fetchDashboardData() {
       /* fallback if /crowd-data not present */
     }
 
-    // Fetch real-time person-counter status directly from FastAPI /api/v1/person-counter/status for Gate wise Entry/Exit table
+    // Fetch real-time person-counter status specifically for Gate 3 (camera 33333333-3333-4333-a333-333333333333)
     try {
       const pcRes = await api.get('/person-counter/status');
       if (pcRes.data && pcRes.data.data && Array.isArray(pcRes.data.data.cameras)) {
-        const activeGates = pcRes.data.data.cameras.map((c, i) => ({
-          gate_number: String(c.camera_id).includes('33333333') ? 'Gate 3' : `Gate ${i + 1}`,
-          entries: c.entry_count || 0,
-          exits: c.exit_count || 0,
-          status: c.worker_running ? 'normal' : 'warning',
-        }));
-
-        if (activeGates.length > 0) {
-          data.gates = activeGates;
+        const cam3Status = pcRes.data.data.cameras.find(c => String(c.camera_id).includes('33333333'));
+        if (cam3Status) {
+          data.gates = [
+            {
+              gate_number: 'Gate 3',
+              entries: cam3Status.entry_count || 0,
+              exits: cam3Status.exit_count || 0,
+              status: cam3Status.worker_running ? 'normal' : 'warning',
+            }
+          ];
         }
       }
     } catch (e) {
