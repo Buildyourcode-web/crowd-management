@@ -996,11 +996,10 @@ async def _queue_mjpeg_generator(
 
             # ── Fetch metrics ─────────────────────────────────────────────────
             from app.queue_management.manager import queue_manager
-            from app.person_counter.worker import person_counter_manager
 
             qs = queue_manager.get_status(camera_id)
-            worker_obj = person_counter_manager._workers.get(str(camera_id))
-            tracked = worker_obj._latest_tracked if worker_obj else []
+            qw = queue_manager._workers.get(str(camera_id))
+            tracked = qw._analyzer._tracker._latest_tracked if (qw and hasattr(qw._analyzer._tracker, "_latest_tracked")) else []
 
             people     = qs.people_inside_queue if qs else 0
             speed      = qs.speed_px_per_sec    if qs else 0.0
@@ -1013,7 +1012,7 @@ async def _queue_mjpeg_generator(
             hbgr = _HEALTH_COLORS_BGR.get(health, (140, 140, 140))
             is_crit = stag_label == "CRITICAL"
 
-            # ── People dots ───────────────────────────────────────────────────
+            # ── People dots (ONLY inside Queue ROI) ──────────────────────────
             for p in tracked:
                 cx, cy = int(p.cx), int(p.cy)
                 inside = rx1 <= cx <= rx2 and ry1 <= cy <= ry2
@@ -1021,9 +1020,6 @@ async def _queue_mjpeg_generator(
                     cv2.circle(frame, (cx, cy), 12, (0, 30, 200), -1)
                     cv2.circle(frame, (cx, cy), 12, (0, 80, 255), 3)
                     cv2.circle(frame, (cx, cy), 4,  (255, 255, 255), -1)
-                else:
-                    cv2.circle(frame, (cx, cy), 8, (160, 160, 160), -1)
-                    cv2.circle(frame, (cx, cy), 8, (100, 100, 100), 2)
 
             # ── Queue ROI rectangle ───────────────────────────────────────────
             ov = frame.copy()
@@ -1076,6 +1072,9 @@ async def queue_mgmt_stream(
     y2: int = Query(default=1080),
 ):
     """Live MJPEG stream: camera feed + queue ROI + dots + 5-level metric bar."""
+    if str(camera_id) == "4e09b542-98b1-4974-9e6c-8f3a8c3d7f0a" and x1 == 0 and y1 == 0 and x2 == 1920 and y2 == 1080:
+        x1, y1, x2, y2 = 1000, 120, 1820, 1080
+
     return StreamingResponse(
         _queue_mjpeg_generator(camera_id, x1, y1, x2, y2),
         media_type="multipart/x-mixed-replace; boundary=frame",
@@ -1093,6 +1092,9 @@ async def queue_mgmt_viewer(
     y2: int = Query(default=1080),
 ):
     """Premium HTML viewer: live camera + queue ROI + animated 5-level dashboard."""
+    if str(camera_id) == "4e09b542-98b1-4974-9e6c-8f3a8c3d7f0a" and x1 == 0 and y1 == 0 and x2 == 1920 and y2 == 1080:
+        x1, y1, x2, y2 = 1000, 120, 1820, 1080
+
     cam_id = str(camera_id)
     qp = f"x1={x1}&y1={y1}&x2={x2}&y2={y2}"
     html = f"""<!DOCTYPE html>

@@ -327,9 +327,31 @@ class QueueAnalyzer:
         """
         t_start = time.monotonic()
 
-        # ── Step 1: YOLO + ByteTrack ──────────────────────────────────────────
+        # ── Step 1: True ROI Crop for maximum GPU inference speed ─────────────
+        h, w = frame.shape[:2]
+        rx1 = max(0, min(int(self._roi.x1), w - 1))
+        ry1 = max(0, min(int(self._roi.y1), h - 1))
+        rx2 = max(0, min(int(self._roi.x2), w - 1))
+        ry2 = max(0, min(int(self._roi.y2), h - 1))
+
+        crop_w = rx2 - rx1
+        crop_h = ry2 - ry1
+
+        if crop_w > 10 and crop_h > 10 and (crop_w < w or crop_h < h):
+            input_frame = frame[ry1:ry2, rx1:rx2]
+            offset_x, offset_y = float(rx1), float(ry1)
+        else:
+            input_frame = frame
+            offset_x, offset_y = 0.0, 0.0
+
         try:
-            tracked: List[TrackedPerson] = self._tracker.update(frame)
+            tracked: List[TrackedPerson] = self._tracker.update(input_frame)
+            if offset_x > 0 or offset_y > 0:
+                for p in tracked:
+                    p.x1 += offset_x
+                    p.x2 += offset_x
+                    p.y1 += offset_y
+                    p.y2 += offset_y
         except Exception as exc:
             logger.error("QueueAnalyzer tracker error | {e}", e=str(exc))
             tracked = []

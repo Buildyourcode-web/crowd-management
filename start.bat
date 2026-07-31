@@ -20,8 +20,8 @@ start "FastAPI Backend" cmd /k "cd /d C:\crowd_management_backend\backend && ven
 timeout /t 5 /nobreak >nul
 
 REM ── Step 3: Start Laravel Frontend ────────────
-echo [3/3] Starting Laravel Frontend (port 8081)...
-start "Laravel Frontend" cmd /k "cd /d C:\crowd_management_backend\frontend && C:\xampp\php\php.exe artisan serve --host=0.0.0.0 --port=8081"
+echo [3/3] Starting Laravel Frontend (port 8088)...
+start "Laravel Frontend" cmd /k "cd /d C:\crowd_management_backend\frontend && C:\xampp\php\php.exe artisan serve --host=0.0.0.0 --port=8088"
 timeout /t 3 /nobreak >nul
 
 echo.
@@ -31,7 +31,7 @@ echo.
 echo   Redis            : localhost:6379
 echo   FastAPI Backend  : http://127.0.0.1:8000
 echo   API Docs (Swagger): http://127.0.0.1:8000/docs
-echo   Laravel Frontend : http://127.0.0.1:8081
+echo   Laravel Frontend : http://127.0.0.1:8088
 echo ===============================================
 echo.
 pause

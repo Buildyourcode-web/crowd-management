@@ -600,11 +600,28 @@ class DashboardApp {
 
         queues.forEach(queue => {
             const tr = document.createElement('tr');
-            const mLower = queue.movement.toLowerCase();
-            
-            const dotClass = mLower === 'moving' ? 'dot-green' : (mLower === 'slow' ? 'dot-yellow' : 'dot-red');
-            const labelText = mLower === 'moving' ? 'Moving' : (mLower === 'slow' ? 'Slow' : 'Stopped');
-            
+            const mLower = (queue.movement || '').toLowerCase().trim();
+
+            let dotClass = 'dot-green';
+            let labelText = 'Moving';
+
+            if (mLower === 'very slow' || mLower === 'veryslow') {
+                dotClass = 'dot-orange';
+                labelText = 'Very Slow';
+            } else if (mLower === 'slow') {
+                dotClass = 'dot-yellow';
+                labelText = 'Slow';
+            } else if (mLower === 'stopped' || mLower === 'blocked') {
+                dotClass = 'dot-red';
+                labelText = 'Stopped';
+            } else if (mLower === 'empty') {
+                dotClass = 'dot-grey';
+                labelText = 'Empty';
+            } else {
+                dotClass = 'dot-green';
+                labelText = 'Moving';
+            }
+
             tr.innerHTML = `
                 <td>${this.escapeHTML(queue.queue_number)}</td>
                 <td class="font-numeric">${queue.wait_minutes} mins</td>

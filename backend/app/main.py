@@ -118,11 +118,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         if n:
             logger.info("PersonCounter: {n} worker(s) restored from Redis", n=n)
 
-        # Auto-start worker for any active AI-enabled camera not yet running
+        # Auto-start worker for any active AI-enabled gate camera not yet running
         async with AsyncSessionLocal() as session:
             rows = await session.execute(text(
                 "SELECT id, camera_name, resolution FROM cameras "
-                "WHERE is_active = true AND ai_enabled = true AND stream_enabled = true"
+                "WHERE is_active = true AND ai_enabled = true AND stream_enabled = true "
+                "AND (camera_type IS NULL OR camera_type != 'QUEUE')"
             ))
             cameras = rows.fetchall()
 
@@ -227,16 +228,34 @@ def create_application() -> FastAPI:
     @app.get("/api/crowd-data")
     async def get_crowd_data():
         from app.person_counter.worker import person_counter_manager
-        statuses = person_counter_manager.get_all_statuses()
-        total_in = sum((s.entry_count for s in statuses))
-        total_out = sum((s.exit_count for s in statuses))
-        
+        from app.queue_management.manager import queue_manager
+
+        q_statuses = queue_manager.get_all_statuses()
+        queue_cam_ids = {str(qs.camera_id) for qs in q_statuses}
+        gate_statuses = [s for s in person_counter_manager.get_all_statuses() if str(s.camera_id) not in queue_cam_ids]
+
+        total_in = sum((s.entry_count for s in gate_statuses))
+        total_out = sum((s.exit_count for s in gate_statuses))
+        queues_list = []
+        for idx, qs in enumerate(q_statuses, 1):
+            if qs.stagnation_label in ["BLOCKED", "CRITICAL"]:
+                m_label = "stopped"
+            else:
+                m_label = (qs.queue_health or "MOVING").lower()
+
+            wait_min = max(0, int(round(qs.stagnation_seconds / 60.0)))
+            queues_list.append({
+                "queue_number": f"Queue {idx:02d}",
+                "wait_minutes": wait_min,
+                "movement": m_label
+            })
+
         return {
             "success": True,
             "system": {
                 "status": "live",
                 "ai_connected": True,
-                "camera_connected": len(statuses) > 0,
+                "camera_connected": len(gate_statuses) > 0 or len(q_statuses) > 0,
             },
             "summary": {
                 "total_entries": total_in,
@@ -247,12 +266,12 @@ def create_application() -> FastAPI:
                 {
                     "id": "main-zone",
                     "name": "Main Entrance Zone",
-                    "current_count": total_in - total_out,
+                    "current_count": max(0, total_in - total_out),
                     "capacity": 1000
                 }
             ],
             "gates": [],
-            "queues": []
+            "queues": queues_list
         }
 
     # ── WebSocket Routes ──────────────────────────────────────────────────────

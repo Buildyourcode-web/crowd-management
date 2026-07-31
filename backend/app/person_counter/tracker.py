@@ -112,6 +112,7 @@ class PersonTracker:
     def __init__(self, frame_rate: int = 10) -> None:
         self._frame_rate = frame_rate
         self._tracker: Optional[Any] = None
+        self._latest_tracked: List[TrackedPerson] = []
 
         if not _BYTETRACK_AVAILABLE:
             return
@@ -167,7 +168,14 @@ class PersonTracker:
         # to class 0 before tracking — reduces tracker overhead significantly.
         # This reuses the same loaded model instance (never reloads).
         try:
-            results = model(frame, classes=[PERSON_CLASS_ID], verbose=False)
+            results = model(
+                frame,
+                classes=[PERSON_CLASS_ID],
+                imgsz=640,
+                conf=0.35,
+                iou=0.45,
+                verbose=False,
+            )
         except Exception as exc:
             logger.error(
                 "PersonTracker detection failed | {err}", err=str(exc)
@@ -185,6 +193,7 @@ class PersonTracker:
                     self._tracker.update(np.empty((0, 6)), frame)
             except Exception:
                 pass
+            self._latest_tracked = []
             return []
 
         # ── Step 2: BYTETracker update ────────────────────────────────────────
@@ -222,4 +231,5 @@ class PersonTracker:
                 )
             )
 
+        self._latest_tracked = persons
         return persons
