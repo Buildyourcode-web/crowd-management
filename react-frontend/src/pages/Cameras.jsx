@@ -8,7 +8,11 @@ const CAM_BASE = import.meta.env.VITE_CAMERAS_API_URL || 'http://127.0.0.1:8001/
  * Camera card – identical to the inline template in cameras.blade.php
  */
 function CameraCard({ cam, onZoom }) {
-  const streamSrc = cam.stream_url || `${CAM_BASE}/cameras/${cam.id || cam.camera_id}/stream`;
+  const isQueueCam = String(cam.id || cam.camera_id || '').includes('4e09b542');
+  const streamSrc  = isQueueCam
+    ? 'http://127.0.0.1:8000/api/v1/cameras/4e09b542-98b1-4974-9e6c-8f3a8c3d7f0a/queue-stream'
+    : (cam.stream_url || `${CAM_BASE}/cameras/${cam.id || cam.camera_id}/stream`);
+
   const camName   = cam.name  || cam.camera_name  || `Camera ${cam.id || ''}`;
   const zoneName  = cam.zone_name || cam.zone || 'Main Zone';
 
@@ -22,15 +26,19 @@ function CameraCard({ cam, onZoom }) {
     <div
       className="camera-card"
       id={`camera-card-${cam.id || '1'}`}
-      onClick={() => onZoom(camName, streamSrc)}
+      onClick={() => onZoom(camName, streamSrc, isQueueCam)}
     >
       <div className="camera-video-container">
         <img
           src={streamSrc}
-          onError={e => { e.target.src = '/images/detection-placeholder.jpg'; }}
+          onError={e => {
+            if (!isQueueCam) {
+              e.target.src = '/images/detection-placeholder.jpg';
+            }
+          }}
           alt={camName}
           className="camera-video-placeholder"
-          style={{ opacity: 0.9 }}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 1, backgroundColor: '#000' }}
         />
         <div className="camera-scanner-overlay"></div>
         <div className="camera-scanline"></div>
@@ -49,7 +57,7 @@ function CameraCard({ cam, onZoom }) {
 /**
  * Fullscreen CCTV zoom modal – replicates the cctv-zoom-modal in cameras.blade.php
  */
-function CctvZoomModal({ isOpen, cameraName, streamSrc, onClose }) {
+function CctvZoomModal({ isOpen, cameraName, streamSrc, isQueueCam, onClose }) {
   const [timeStr, setTimeStr] = useState(() => new Date().toLocaleTimeString());
   useEffect(() => {
     if (!isOpen) return;
@@ -72,23 +80,33 @@ function CctvZoomModal({ isOpen, cameraName, streamSrc, onClose }) {
       onClick={onClose}
     >
       <button type="button" className="btn-close-zoom" onClick={onClose}>&times;</button>
-      <div className="zoom-content-wrapper" onClick={e => e.stopPropagation()}>
-        <img
-          id="zoomed-camera-img"
-          src={streamSrc}
-          alt="CCTV Zoomed Feed"
-          className="zoomed-camera-img"
-          onError={e => { e.target.src = '/images/detection-placeholder.jpg'; }}
-        />
-        <div className="camera-telemetry" style={{ top: '16px', left: '16px', right: '16px' }}>
-          <span className="camera-rec-dot" style={{ fontSize: '13px' }}>
-            <span className="rec-dot" style={{ width: '9px', height: '9px' }}></span> LIVE CCTV FEED
-          </span>
-          <span id="zoomed-camera-name" className="zoomed-camera-name">{cameraName}</span>
-          <span className="camera-timestamp font-numeric" style={{ fontSize: '13px' }}>
-            REC // {timeStr}
-          </span>
-        </div>
+      <div className="zoom-content-wrapper" onClick={e => e.stopPropagation()} style={{ width: '96vw', height: '94vh', padding: 0, borderRadius: '14px', overflow: 'hidden' }}>
+        {isQueueCam ? (
+          <iframe
+            src="http://127.0.0.1:8000/api/v1/cameras/4e09b542-98b1-4974-9e6c-8f3a8c3d7f0a/queue-viewer"
+            title="Queue Monitor — 5-Level Live Viewer"
+            style={{ width: '100%', height: '100%', border: 'none' }}
+          />
+        ) : (
+          <>
+            <img
+              id="zoomed-camera-img"
+              src={streamSrc}
+              alt="CCTV Zoomed Feed"
+              className="zoomed-camera-img"
+              onError={e => { e.target.src = '/images/detection-placeholder.jpg'; }}
+            />
+            <div className="camera-telemetry" style={{ top: '16px', left: '16px', right: '16px' }}>
+              <span className="camera-rec-dot" style={{ fontSize: '13px' }}>
+                <span className="rec-dot" style={{ width: '9px', height: '9px' }}></span> LIVE CCTV FEED
+              </span>
+              <span id="zoomed-camera-name" className="zoomed-camera-name">{cameraName}</span>
+              <span className="camera-timestamp font-numeric" style={{ fontSize: '13px' }}>
+                REC // {timeStr}
+              </span>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -102,7 +120,7 @@ export default function Cameras() {
   const [cameras, setCameras] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(false);
-  const [zoomCam, setZoomCam] = useState(null); // { name, src }
+  const [zoomCam, setZoomCam] = useState(null); // { name, src, isQueueCam }
 
   const loadCameras = useCallback(async () => {
     setLoading(true);
@@ -132,7 +150,7 @@ export default function Cameras() {
           ...existing,
           id: '4e09b542-98b1-4974-9e6c-8f3a8c3d7f0a',
           name: existing.camera_name || existing.name || 'Queue Monitor — 4e09b542',
-          stream_url: 'http://localhost:8000/api/v1/cameras/4e09b542-98b1-4974-9e6c-8f3a8c3d7f0a/queue-mjpeg',
+          stream_url: 'http://127.0.0.1:8000/api/v1/cameras/4e09b542-98b1-4974-9e6c-8f3a8c3d7f0a/queue-stream',
           zone_name: 'Main Queue Pathway',
         };
       }
@@ -144,7 +162,7 @@ export default function Cameras() {
       return {
         id: '4e09b542-98b1-4974-9e6c-8f3a8c3d7f0a',
         name: 'Queue Monitor — 4e09b542',
-        stream_url: 'http://localhost:8000/api/v1/cameras/4e09b542-98b1-4974-9e6c-8f3a8c3d7f0a/queue-mjpeg',
+        stream_url: 'http://127.0.0.1:8000/api/v1/cameras/4e09b542-98b1-4974-9e6c-8f3a8c3d7f0a/queue-stream',
         zone_name: 'Main Queue Pathway',
       };
     }
