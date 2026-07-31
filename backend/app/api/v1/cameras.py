@@ -202,23 +202,32 @@ async def _mjpeg_generator(camera_id: uuid.UUID) -> AsyncGenerator[bytes, None]:
     _, ph_buf = cv2.imencode(".jpg", placeholder)
     placeholder_bytes = ph_buf.tobytes()
 
+    last_encoded_bytes = None
     last_frame_number = -1
+
     while True:
         entry = await frame_buffer.get(camera_id)
 
         if entry is None or entry.latest_frame is None:
-            # Camera not yet connected — send placeholder
-            yield (
-                b"--frame\r\n"
-                b"Content-Type: image/jpeg\r\n\r\n"
-                + placeholder_bytes +
-                b"\r\n"
-            )
-            await asyncio.sleep(0.5)
+            if last_encoded_bytes is not None:
+                yield (
+                    b"--frame\r\n"
+                    b"Content-Type: image/jpeg\r\n\r\n"
+                    + last_encoded_bytes +
+                    b"\r\n"
+                )
+            else:
+                yield (
+                    b"--frame\r\n"
+                    b"Content-Type: image/jpeg\r\n\r\n"
+                    + placeholder_bytes +
+                    b"\r\n"
+                )
+            await asyncio.sleep(0.04)
             continue
 
-        # Only encode if frame is new
-        if entry.frame_number != last_frame_number:
+        # Re-encode frame if it's new or if we haven't encoded one yet
+        if entry.frame_number != last_frame_number or last_encoded_bytes is None:
             last_frame_number = entry.frame_number
             frame = entry.latest_frame.copy()
             h, w = frame.shape[:2]
@@ -261,12 +270,12 @@ async def _mjpeg_generator(camera_id: uuid.UUID) -> AsyncGenerator[bytes, None]:
                 ly1 = int(line.start_y)
                 lx2 = int(line.end_x)
                 ly2 = int(line.end_y)
-                # Main line — bright white with black shadow for visibility
-                cv2.line(frame, (lx1, ly1), (lx2, ly2), (0, 0, 0), 5)    # shadow
-                cv2.line(frame, (lx1, ly1), (lx2, ly2), (255, 255, 255), 2)  # line
-                # Small ENTRY/EXIT label above the line
-                cv2.putText(frame, "v ENTRY / EXIT ^",
-                            (lx1 + 10, ly1 - 8),
+
+                line_color = (0, 255, 0)
+                cv2.line(frame, (lx1, ly1), (lx2, ly2), line_color, 3)
+
+                lbl_pos = (min(lx1 + 20, w - 200), max(ly1 - 10, 30))
+                cv2.putText(frame, "COUNTING LINE", lbl_pos,
                             cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 2)
 
             # ── Top status bar ────────────────────────────────────────────────
@@ -287,14 +296,17 @@ async def _mjpeg_generator(camera_id: uuid.UUID) -> AsyncGenerator[bytes, None]:
 
             ok, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 75])
             if ok:
-                yield (
-                    b"--frame\r\n"
-                    b"Content-Type: image/jpeg\r\n\r\n"
-                    + buf.tobytes() +
-                    b"\r\n"
-                )
+                last_encoded_bytes = buf.tobytes()
 
-        await asyncio.sleep(0.05)  # ~20 fps max for stream
+        if last_encoded_bytes is not None:
+            yield (
+                b"--frame\r\n"
+                b"Content-Type: image/jpeg\r\n\r\n"
+                + last_encoded_bytes +
+                b"\r\n"
+            )
+
+        await asyncio.sleep(0.04)
 
 
 @router.get(
