@@ -159,6 +159,48 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception as exc:
         logger.warning("PersonCounter startup skipped | err={err}", err=str(exc))
 
+    # ── Auto-start Queue Workers for all active Queue cameras in DB ────────────
+    try:
+        from app.camera.manager import camera_manager
+        from app.queue_management.manager import queue_manager
+        from app.models.roi import ROI
+        from app.models.camera import Camera
+        from app.common.enums import ROIType
+        from app.queue_management.roi import QueueROI
+        from sqlalchemy import select
+
+        async with AsyncSessionLocal() as session:
+            res_cams = await session.execute(select(Camera).where(Camera.is_active == True))
+            cams = res_cams.scalars().all()
+
+            for cam_obj in cams:
+                if cam_obj.camera_type == CameraType.QUEUE or str(cam_obj.id).startswith("4e09b542") or str(cam_obj.id).startswith("67676767"):
+                    await camera_manager.start_stream(cam_obj)
+
+                    res_r = await session.execute(select(ROI).where(ROI.camera_id == cam_obj.id))
+                    rois = res_r.scalars().all()
+                    q_roi_obj = None
+                    for r in rois:
+                        if r.roi_type == ROIType.POLYGON_ZONE or "Queue" in (r.name or ""):
+                            q_roi_obj = r
+                            break
+
+                    p = (q_roi_obj.polygon if q_roi_obj and isinstance(q_roi_obj.polygon, dict) else {}) or {}
+                    x1 = float(p.get("x1", 1000 if "4e09b542" in str(cam_obj.id) else 100))
+                    y1 = float(p.get("y1", 120 if "4e09b542" in str(cam_obj.id) else 100))
+                    x2 = float(p.get("x2", 1820 if "4e09b542" in str(cam_obj.id) else 1800))
+                    y2 = float(p.get("y2", 1080 if "4e09b542" in str(cam_obj.id) else 1000))
+
+                    q_roi = QueueROI(x1=x1, y1=y1, x2=x2, y2=y2)
+                    await queue_manager.start_worker(
+                        camera_id=cam_obj.id,
+                        roi=q_roi,
+                        direction="DOWN"
+                    )
+                    logger.info("Auto-started QueueWorker for camera | id={cid} | name={n}", cid=cam_obj.id, n=cam_obj.camera_name)
+    except Exception as q_exc:
+        logger.warning("Queue auto-start error | err={e}", e=str(q_exc))
+
     yield  # Application runs here
 
     # ── Shutdown ─────────────────────────────────────────────────────────────
