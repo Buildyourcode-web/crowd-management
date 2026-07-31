@@ -1072,8 +1072,15 @@ async def queue_mgmt_stream(
     y2: int = Query(default=1080),
 ):
     """Live MJPEG stream: camera feed + queue ROI + dots + 5-level metric bar."""
-    if str(camera_id) == "4e09b542-98b1-4974-9e6c-8f3a8c3d7f0a" and x1 == 0 and y1 == 0 and x2 == 1920 and y2 == 1080:
-        x1, y1, x2, y2 = 1000, 120, 1820, 1080
+    if x1 == 0 and y1 == 0 and x2 == 1920 and y2 == 1080:
+        from app.queue_management.manager import queue_manager
+        qw = queue_manager._workers.get(str(camera_id))
+        if qw and hasattr(qw, "_roi"):
+            x1, y1, x2, y2 = int(qw._roi.x1), int(qw._roi.y1), int(qw._roi.x2), int(qw._roi.y2)
+        elif str(camera_id) == "4e09b542-98b1-4974-9e6c-8f3a8c3d7f0a":
+            x1, y1, x2, y2 = 1000, 120, 1820, 1080
+        elif str(camera_id) == "67676767-6767-4e67-a676-676767676767":
+            x1, y1, x2, y2 = 100, 100, 1800, 1000
 
     return StreamingResponse(
         _queue_mjpeg_generator(camera_id, x1, y1, x2, y2),
@@ -1092,8 +1099,15 @@ async def queue_mgmt_viewer(
     y2: int = Query(default=1080),
 ):
     """Premium HTML viewer: live camera + queue ROI + animated 5-level dashboard."""
-    if str(camera_id) == "4e09b542-98b1-4974-9e6c-8f3a8c3d7f0a" and x1 == 0 and y1 == 0 and x2 == 1920 and y2 == 1080:
-        x1, y1, x2, y2 = 1000, 120, 1820, 1080
+    if x1 == 0 and y1 == 0 and x2 == 1920 and y2 == 1080:
+        from app.queue_management.manager import queue_manager
+        qw = queue_manager._workers.get(str(camera_id))
+        if qw and hasattr(qw, "_roi"):
+            x1, y1, x2, y2 = int(qw._roi.x1), int(qw._roi.y1), int(qw._roi.x2), int(qw._roi.y2)
+        elif str(camera_id) == "4e09b542-98b1-4974-9e6c-8f3a8c3d7f0a":
+            x1, y1, x2, y2 = 1000, 120, 1820, 1080
+        elif str(camera_id) == "67676767-6767-4e67-a676-676767676767":
+            x1, y1, x2, y2 = 100, 100, 1800, 1000
 
     cam_id = str(camera_id)
     qp = f"x1={x1}&y1={y1}&x2={x2}&y2={y2}"
