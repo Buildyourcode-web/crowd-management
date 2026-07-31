@@ -73,6 +73,8 @@ function CctvZoomModal({ isOpen, cameraName, streamSrc, isQueueCam, onClose }) {
 
   if (!isOpen) return null;
 
+  const isQueue = Boolean(isQueueCam) || (streamSrc || '').includes('4e09b542') || (streamSrc || '').includes('queue');
+
   return (
     <div
       id="cctv-zoom-modal"
@@ -81,9 +83,9 @@ function CctvZoomModal({ isOpen, cameraName, streamSrc, isQueueCam, onClose }) {
     >
       <button type="button" className="btn-close-zoom" onClick={onClose}>&times;</button>
       <div className="zoom-content-wrapper" onClick={e => e.stopPropagation()} style={{ width: '96vw', height: '94vh', padding: 0, borderRadius: '14px', overflow: 'hidden' }}>
-        {isQueueCam ? (
+        {isQueue ? (
           <iframe
-            src="http://127.0.0.1:8000/api/v1/cameras/4e09b542-98b1-4974-9e6c-8f3a8c3d7f0a/queue-viewer"
+            src="/api/v1/cameras/4e09b542-98b1-4974-9e6c-8f3a8c3d7f0a/queue-viewer"
             title="Queue Monitor — 5-Level Live Viewer"
             style={{ width: '100%', height: '100%', border: 'none' }}
           />
