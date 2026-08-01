@@ -29,11 +29,11 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
 
     # ── PostgreSQL / Supabase ──────────────────────────────────────────────────
-    POSTGRES_HOST: str = "postgres"
+    POSTGRES_HOST: str = "db.mtysplndnfjssgqvomkh.supabase.co"
     POSTGRES_PORT: int = 5432
-    POSTGRES_DB: str = "temple_crowd_db"
+    POSTGRES_DB: str = "postgres"
     POSTGRES_USER: str = "postgres"
-    POSTGRES_PASSWORD: str = "root"
+    POSTGRES_PASSWORD: str = "Ramkumar@039"
     POSTGRES_POOL_SIZE: int = 20
     POSTGRES_MAX_OVERFLOW: int = 40
     POSTGRES_POOL_RECYCLE: int = 3600
@@ -84,50 +84,28 @@ class Settings(BaseSettings):
 
     @property
     def DATABASE_URL(self) -> str:
-        if self.SUPABASE_DATABASE_URL:
-            url = self.SUPABASE_DATABASE_URL.strip()
-            if "://" in url:
-                scheme, rest = url.split("://", 1)
-                if "@" in rest:
-                    parts = rest.rsplit("@", 1)
-                    user_pass = parts[0]
-                    host_db = parts[1]
-                    if ":" in user_pass:
-                        user, passwd = user_pass.split(":", 1)
-                        import urllib.parse
-                        passwd_unquoted = urllib.parse.unquote(passwd)
-                        encoded_passwd = urllib.parse.quote_plus(passwd_unquoted)
-                        rest = f"{user}:{encoded_passwd}@{host_db}"
-                url = f"postgresql+asyncpg://{rest}"
-            return url
-        return (
-            f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
+        import urllib.parse
+        encoded_password = urllib.parse.quote_plus(self.POSTGRES_PASSWORD)
+        url = (
+            f"postgresql+asyncpg://{self.POSTGRES_USER}:{encoded_password}"
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
+        if "supabase.co" in self.POSTGRES_HOST or "pooler.supabase.com" in self.POSTGRES_HOST:
+            url += "?ssl=require"
+        return url
 
     @property
     def DATABASE_URL_SYNC(self) -> str:
         """Sync URL used by Alembic migrations."""
-        if self.SUPABASE_DATABASE_URL:
-            url = self.SUPABASE_DATABASE_URL.strip()
-            if "://" in url:
-                scheme, rest = url.split("://", 1)
-                if "@" in rest:
-                    parts = rest.rsplit("@", 1)
-                    user_pass = parts[0]
-                    host_db = parts[1]
-                    if ":" in user_pass:
-                        user, passwd = user_pass.split(":", 1)
-                        import urllib.parse
-                        passwd_unquoted = urllib.parse.unquote(passwd)
-                        encoded_passwd = urllib.parse.quote_plus(passwd_unquoted)
-                        rest = f"{user}:{encoded_passwd}@{host_db}"
-                url = f"postgresql+psycopg2://{rest}"
-            return url
-        return (
-            f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
+        import urllib.parse
+        encoded_password = urllib.parse.quote_plus(self.POSTGRES_PASSWORD)
+        url = (
+            f"postgresql+psycopg2://{self.POSTGRES_USER}:{encoded_password}"
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
+        if "supabase.co" in self.POSTGRES_HOST or "pooler.supabase.com" in self.POSTGRES_HOST:
+            url += "?sslmode=require"
+        return url
 
     @property
     def REDIS_URL(self) -> str:
