@@ -189,7 +189,13 @@ async def camera_snapshot(camera_id: uuid.UUID):
 # GET /{camera_id}/stream  →  MJPEG live stream (browser-viewable)
 # ─────────────────────────────────────────────────────────────────────────────
 
-async def _mjpeg_generator(camera_id: uuid.UUID) -> AsyncGenerator[bytes, None]:
+async def _mjpeg_generator(
+    camera_id: uuid.UUID,
+    x1: Optional[int] = None,
+    y1: Optional[int] = None,
+    x2: Optional[int] = None,
+    y2: Optional[int] = None,
+) -> AsyncGenerator[bytes, None]:
     """Yield MJPEG frames continuously from FrameBuffer."""
     frame_buffer = camera_manager.frame_buffer
 
@@ -239,8 +245,8 @@ async def _mjpeg_generator(camera_id: uuid.UUID) -> AsyncGenerator[bytes, None]:
             # ── Draw bounding boxes for tracked persons ───────────────────────
             if worker_obj is not None:
                 for person in worker_obj._latest_tracked:
-                    x1, y1 = int(person.x1), int(person.y1)
-                    x2, y2 = int(person.x2), int(person.y2)
+                    px1, py1 = int(person.x1), int(person.y1)
+                    px2, py2 = int(person.x2), int(person.y2)
                     tid = person.track_id
                     conf = person.confidence
 
@@ -250,32 +256,38 @@ async def _mjpeg_generator(camera_id: uuid.UUID) -> AsyncGenerator[bytes, None]:
                     box_color = (255, 200, 0) if already_counted else (0, 230, 0)
 
                     # Bounding box
-                    cv2.rectangle(frame, (x1, y1), (x2, y2), box_color, 2)
+                    cv2.rectangle(frame, (px1, py1), (px2, py2), box_color, 2)
 
                     # Label: ID + confidence
                     label = f"ID:{tid} {conf:.2f}"
-                    lbl_y = max(y1 - 8, 20)
-                    cv2.rectangle(frame, (x1, lbl_y - 18), (x1 + len(label) * 10, lbl_y + 4), (0, 0, 0), -1)
-                    cv2.putText(frame, label, (x1 + 2, lbl_y),
+                    lbl_y = max(py1 - 8, 20)
+                    cv2.rectangle(frame, (px1, lbl_y - 18), (px1 + len(label) * 10, lbl_y + 4), (0, 0, 0), -1)
+                    cv2.putText(frame, label, (px1 + 2, lbl_y),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.55, box_color, 2)
 
                     # Centroid dot
                     cx, cy = int(person.cx), int(person.cy)
                     cv2.circle(frame, (cx, cy), 5, box_color, -1)
 
-            # ── Draw counting LINE ────────────────────────────────────────────
-            if worker_obj and hasattr(worker_obj, '_line'):
+            # ── Draw counting LINE (URL parameters override or worker line) ───
+            lx1, ly1, lx2, ly2 = None, None, None, None
+            line_color = (0, 255, 0)
+
+            if x1 is not None and y1 is not None and x2 is not None and y2 is not None:
+                lx1, ly1, lx2, ly2 = x1, y1, x2, y2
+                line_color = (0, 230, 255)  # Bright cyan for custom URL line
+            elif worker_obj and hasattr(worker_obj, '_line'):
                 line = worker_obj._line
                 lx1 = int(line.start_x)
                 ly1 = int(line.start_y)
                 lx2 = int(line.end_x)
                 ly2 = int(line.end_y)
 
-                line_color = (0, 255, 0)
+            if lx1 is not None and ly1 is not None and lx2 is not None and ly2 is not None:
                 cv2.line(frame, (lx1, ly1), (lx2, ly2), line_color, 3)
-
-                lbl_pos = (min(lx1 + 20, w - 200), max(ly1 - 10, 30))
-                cv2.putText(frame, "COUNTING LINE", lbl_pos,
+                lbl_pos = (min(lx1 + 20, w - 260), max(ly1 - 10, 30))
+                lbl_text = f"LINE ({lx1},{ly1})->({lx2},{ly2})"
+                cv2.putText(frame, lbl_text, lbl_pos,
                             cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 2)
 
             # ── Top status bar ────────────────────────────────────────────────
@@ -292,7 +304,6 @@ async def _mjpeg_generator(camera_id: uuid.UUID) -> AsyncGenerator[bytes, None]:
                 status_txt = f"FPS:{entry.fps:.1f} | No counter"
             cv2.putText(frame, status_txt, (10, 35),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2)
-
 
             ok, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 75])
             if ok:
@@ -313,10 +324,16 @@ async def _mjpeg_generator(camera_id: uuid.UUID) -> AsyncGenerator[bytes, None]:
     "/{camera_id}/stream",
     summary="Live MJPEG stream from camera",
 )
-async def camera_stream(camera_id: uuid.UUID):
-    """Stream live MJPEG video from the camera's FrameBuffer."""
+async def camera_stream(
+    camera_id: uuid.UUID,
+    x1: Optional[int] = Query(default=None, description="Custom line start X"),
+    y1: Optional[int] = Query(default=None, description="Custom line start Y"),
+    x2: Optional[int] = Query(default=None, description="Custom line end X"),
+    y2: Optional[int] = Query(default=None, description="Custom line end Y"),
+):
+    """Stream live MJPEG video with optional custom line coordinates (x1, y1, x2, y2) in URL."""
     return StreamingResponse(
-        _mjpeg_generator(camera_id),
+        _mjpeg_generator(camera_id, x1=x1, y1=y1, x2=x2, y2=y2),
         media_type="multipart/x-mixed-replace; boundary=frame",
         headers={"Cache-Control": "no-cache"},
     )
