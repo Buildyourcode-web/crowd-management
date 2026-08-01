@@ -334,6 +334,7 @@ async def seed_initial_cameras() -> None:
     cam1_id = uuid.UUID('4e09b542-98b1-4974-9e6c-8f3a8c3d7f0a')
     cam2_id = uuid.UUID('67676767-6767-4e67-a676-676767676767')
     cam3_id = uuid.UUID('33333333-3333-4333-a333-333333333333')
+    cam4_id = uuid.UUID('44444444-4444-4444-a444-444444444444')
 
     async with AsyncSessionLocal() as session:
         # Check Camera 1
@@ -415,5 +416,37 @@ async def seed_initial_cameras() -> None:
                 is_active=True
             )
             session.add(roi3)
+
+        # Check Camera 4 (Exit Counter)
+        res4 = await session.execute(select(Camera).where(Camera.id == cam4_id))
+        if not res4.scalar_one_or_none():
+            c4 = Camera(
+                id=cam4_id,
+                camera_name="Exit Counter Camera 4 (192.168.1.100 ch15)",
+                camera_type=CameraType.EXIT,
+                status=CameraStatus.ONLINE,
+                is_active=True,
+                stream_enabled=True,
+                ai_enabled=True,
+                rtsp_url="rtsp://admin:Admin%40123@192.168.1.100:554/cam/realmonitor?channel=15&subtype=1",
+                resolution="1920x1080",
+                location="Main Gate Exit 4"
+            )
+            session.add(c4)
+            roi4 = ROI(
+                id=uuid.uuid4(),
+                camera_id=cam4_id,
+                name="Main Exit Counting Line 4",
+                roi_type=ROIType.COUNTING_LINE,
+                polygon={
+                    "start_x": 0.0,
+                    "start_y": 540.0,
+                    "end_x": 1920.0,
+                    "end_y": 540.0,
+                    "orientation": "horizontal"
+                },
+                is_active=True
+            )
+            session.add(roi4)
 
         await session.commit()
