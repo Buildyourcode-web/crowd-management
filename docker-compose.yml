@@ -30,10 +30,10 @@ services:
       - "8000:8000"
     environment:
       SECRET_KEY: "010d67237526fbafce54cd1528959fc6441325c1d807bcb00f2f6d54e74e2dec"
-      POSTGRES_HOST: "db.mtysplndnfjssgqvomkh.supabase.co"
-      POSTGRES_PORT: 5432
+      POSTGRES_HOST: "aws-0-ap-south-1.pooler.supabase.com"
+      POSTGRES_PORT: 6543
       POSTGRES_DB: "postgres"
-      POSTGRES_USER: "postgres"
+      POSTGRES_USER: "postgres.mtysplndnfjssgqvomkh"
       POSTGRES_PASSWORD: "Ramkumar@039"
       REDIS_HOST: redis
       REDIS_PORT: 6379

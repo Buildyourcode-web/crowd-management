@@ -89,8 +89,16 @@ class ModelManager:
                 d=self._device,
             )
 
-            # Load model
-            self._model = YOLO(abs_path)
+            # Load model (with fallback if local file is a Git LFS pointer text file)
+            try:
+                self._model = YOLO(abs_path)
+            except Exception as load_err:
+                logger.warning(
+                    "Local model loading failed ({err}) — downloading standard yolo11n.pt model...",
+                    err=str(load_err),
+                )
+                self._model = YOLO("yolo11n.pt")
+
             self._model.to(self._device)
 
             # Warm-up: silent inference on a standard 640×640 blank image.
