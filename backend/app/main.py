@@ -164,8 +164,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception as exc:
         logger.warning("PersonCounter startup skipped | err={err}", err=str(exc))
 
-    # ── Auto-start Queue Workers for all active Queue cameras in DB ────────────
+    # ── Auto-start Queue Workers (Redis restore → DB query → Fallback defaults) ────────────
     try:
+        # Step 1: Restore from Redis if available
+        n_restored = await queue_manager.restore_from_redis()
+        if n_restored:
+            logger.info("QueueManager: {n} worker(s) restored from Redis", n=n_restored)
+
+        # Step 2: Query DB for active queue cameras
         from app.models.roi import ROI
         from app.models.camera import Camera
         from app.common.enums import ROIType, CameraType
@@ -200,7 +206,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                     )
                     logger.info("Auto-started QueueWorker for camera | id={cid} | name={n}", cid=cam_obj.id, n=cam_obj.camera_name)
     except Exception as q_exc:
-        logger.warning("Queue auto-start error | err={e}", e=str(q_exc))
+        logger.warning("Queue auto-start from DB skipped/failed | err={e} — using fallback defaults", e=str(q_exc))
+        # Fallback: start default workers for Camera 1 and Camera 2 if DB unavailable
+        import uuid
+        from app.queue_management.roi import QueueROI
+        cam1_id = uuid.UUID('4e09b542-98b1-4974-9e6c-8f3a8c3d7f0a')
+        cam2_id = uuid.UUID('67676767-6767-4e67-a676-676767676767')
+        await queue_manager.start_worker(cam1_id, QueueROI(1000, 120, 1820, 1080), direction="DOWN")
+        await queue_manager.start_worker(cam2_id, QueueROI(450, 200, 1650, 980), direction="DOWN")
+        logger.info("Fallback QueueWorkers started for Cam 1 & Cam 2")
 
     yield  # Application runs here
 
@@ -351,12 +365,12 @@ async def seed_initial_cameras() -> None:
         if not res2.scalar_one_or_none():
             c2 = Camera(
                 id=cam2_id,
-                camera_name="Queue Monitor 2 (192.168.1.67)",
+                camera_name="Queue Monitor 2 (192.168.1.65)",
                 camera_type=CameraType.QUEUE,
                 status=CameraStatus.ONLINE,
                 is_active=True,
                 stream_enabled=True,
-                rtsp_url="rtsp://admin:cctv%40321@192.168.1.67:554/Streaming/Channels/101",
+                rtsp_url="rtsp://admin:cctv%40321@192.168.1.65:554/Streaming/Channels/101",
                 location="Main Queue Pathway 2"
             )
             session.add(c2)
