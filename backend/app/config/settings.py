@@ -80,7 +80,7 @@ class Settings(BaseSettings):
     # ── AI / YOLO ─────────────────────────────────────────────────────────────
     AI_MODEL_PATH: str = "models/yolo11m.pt"   # relative to CWD or absolute
     AI_MODEL_NAME: str = "yolo11m.pt"
-    AI_DEVICE: str = "auto"                     # "auto" | "cuda" | "cpu"
+    AI_DEVICE: str = "cuda"                     # "auto" | "cuda" | "cpu"
 
     @property
     def DATABASE_URL(self) -> str:
