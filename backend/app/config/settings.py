@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     ALGORITHM: str = "HS256"
 
-    # ── PostgreSQL ────────────────────────────────────────────────────────────
+    # ── PostgreSQL / Supabase ──────────────────────────────────────────────────
     POSTGRES_HOST: str = "postgres"
     POSTGRES_PORT: int = 5432
     POSTGRES_DB: str = "temple_crowd_db"
@@ -38,6 +38,11 @@ class Settings(BaseSettings):
     POSTGRES_MAX_OVERFLOW: int = 40
     POSTGRES_POOL_RECYCLE: int = 3600
     POSTGRES_POOL_TIMEOUT: int = 30
+
+    # ── Supabase ──────────────────────────────────────────────────────────────
+    SUPABASE_DATABASE_URL: str = ""
+    SUPABASE_URL: str = ""
+    SUPABASE_KEY: str = ""
 
     # ── Redis ─────────────────────────────────────────────────────────────────
     REDIS_HOST: str = "localhost"
@@ -79,6 +84,22 @@ class Settings(BaseSettings):
 
     @property
     def DATABASE_URL(self) -> str:
+        if self.SUPABASE_DATABASE_URL:
+            url = self.SUPABASE_DATABASE_URL.strip()
+            if "://" in url:
+                scheme, rest = url.split("://", 1)
+                if "@" in rest:
+                    parts = rest.rsplit("@", 1)
+                    user_pass = parts[0]
+                    host_db = parts[1]
+                    if ":" in user_pass:
+                        user, passwd = user_pass.split(":", 1)
+                        import urllib.parse
+                        passwd_unquoted = urllib.parse.unquote(passwd)
+                        encoded_passwd = urllib.parse.quote_plus(passwd_unquoted)
+                        rest = f"{user}:{encoded_passwd}@{host_db}"
+                url = f"postgresql+asyncpg://{rest}"
+            return url
         return (
             f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
@@ -87,6 +108,22 @@ class Settings(BaseSettings):
     @property
     def DATABASE_URL_SYNC(self) -> str:
         """Sync URL used by Alembic migrations."""
+        if self.SUPABASE_DATABASE_URL:
+            url = self.SUPABASE_DATABASE_URL.strip()
+            if "://" in url:
+                scheme, rest = url.split("://", 1)
+                if "@" in rest:
+                    parts = rest.rsplit("@", 1)
+                    user_pass = parts[0]
+                    host_db = parts[1]
+                    if ":" in user_pass:
+                        user, passwd = user_pass.split(":", 1)
+                        import urllib.parse
+                        passwd_unquoted = urllib.parse.unquote(passwd)
+                        encoded_passwd = urllib.parse.quote_plus(passwd_unquoted)
+                        rest = f"{user}:{encoded_passwd}@{host_db}"
+                url = f"postgresql+psycopg2://{rest}"
+            return url
         return (
             f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"

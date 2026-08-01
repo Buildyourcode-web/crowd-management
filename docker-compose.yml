@@ -1,31 +1,12 @@
 version: "3.8"
 
 # ══════════════════════════════════════════════════════════════════════
-# Temple AI Crowd Management System — AWS Production Docker Compose
+# Temple AI Crowd Management System — Supabase Cloud Docker Compose
 # ══════════════════════════════════════════════════════════════════════
 
 services:
 
-  # ── PostgreSQL Database ───────────────────────────────────────────
-  postgres:
-    image: postgres:15-alpine
-    container_name: temple_postgres
-    restart: always
-    environment:
-      POSTGRES_DB: temple_crowd_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: root
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # ── Redis ─────────────────────────────────────────────────────────
+  # ── Redis (In-Memory Pub/Sub & Caching) ───────────────────────────
   redis:
     image: redis:7-alpine
     container_name: temple_redis
@@ -38,7 +19,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # ── FastAPI Backend (AI Analytics & Streaming) ─────────────────────
+  # ── FastAPI Backend (AI Analytics & Supabase Database) ─────────────
   backend:
     build:
       context: ./backend
@@ -48,11 +29,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_DB: temple_crowd_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: root
+      SUPABASE_DATABASE_URL: "postgresql://postgres:Ramkumar%40039@db.mtysplndnfjssgqvomkh.supabase.co:5432/postgres"
       REDIS_HOST: redis
       REDIS_PORT: 6379
       ENVIRONMENT: production
@@ -62,8 +39,6 @@ services:
       - ./backend/models:/app/models
       - ./backend/logs:/app/logs
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
 
@@ -78,6 +53,3 @@ services:
       - "3000:80"
     depends_on:
       - backend
-
-volumes:
-  postgres_data:
