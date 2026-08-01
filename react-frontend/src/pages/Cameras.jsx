@@ -177,6 +177,16 @@ export default function Cameras() {
       };
     }
 
+    if (idx === 3) {
+      return {
+        id: '44444444-4444-4444-a444-444444444444',
+        name: 'Exit Counter Camera 4',
+        stream_url: '/api/v1/cameras/44444444-4444-4444-a444-444444444444/stream',
+        zone_name: 'Main Gate Exit 4',
+        camera_type: 'EXIT',
+      };
+    }
+
     if (existing) return existing;
 
     return {

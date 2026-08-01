@@ -33,20 +33,31 @@ export async function fetchDashboardData() {
       /* fallback if /crowd-data not present */
     }
 
-    // Fetch real-time person-counter status specifically for Gate 3 (camera 33333333-3333-4333-a333-333333333333)
+    // Fetch real-time person-counter status for Gate 3 and Gate 4
     try {
       const pcRes = await api.get('/person-counter/status');
       if (pcRes.data && pcRes.data.data && Array.isArray(pcRes.data.data.cameras)) {
+        const gatesList = [];
         const cam3Status = pcRes.data.data.cameras.find(c => String(c.camera_id).includes('33333333'));
         if (cam3Status) {
-          data.gates = [
-            {
-              gate_number: 'Gate 3',
-              entries: cam3Status.entry_count || 0,
-              exits: cam3Status.exit_count || 0,
-              status: cam3Status.worker_running ? 'normal' : 'warning',
-            }
-          ];
+          gatesList.push({
+            gate_number: 'Gate 3',
+            entries: cam3Status.entry_count || 0,
+            exits: cam3Status.exit_count || 0,
+            status: cam3Status.worker_running ? 'normal' : 'warning',
+          });
+        }
+        const cam4Status = pcRes.data.data.cameras.find(c => String(c.camera_id).includes('44444444'));
+        if (cam4Status) {
+          gatesList.push({
+            gate_number: 'Gate 4',
+            entries: cam4Status.entry_count || 0,
+            exits: cam4Status.exit_count || 0,
+            status: cam4Status.worker_running ? 'normal' : 'warning',
+          });
+        }
+        if (gatesList.length > 0) {
+          data.gates = gatesList;
         }
       }
     } catch (e) {
