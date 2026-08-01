@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { fetchCameras } from '../services/api';
 
-const CAM_BASE = import.meta.env.VITE_CAMERAS_API_URL || 'http://127.0.0.1:8000/api/v1';
+const CAM_BASE = import.meta.env.VITE_CAMERAS_API_URL || '/api/v1';
 
 /**
  * Camera card – identical to the inline template in cameras.blade.php
