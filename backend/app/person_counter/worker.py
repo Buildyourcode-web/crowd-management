@@ -172,6 +172,24 @@ class PersonCounterWorker:
         self._last_pub_entry: int = -1
         self._last_pub_exit: int = -1
 
+    def update_line(self, counting_line: CountingLine) -> None:
+        """Update counting line dynamically on the live worker without restarting task."""
+        self._line = counting_line
+        self._zone = TriggerZone.for_horizontal_band(
+            frame_width=max(counting_line.start_x, counting_line.end_x, 1920.0),
+            y_center=(counting_line.start_y + counting_line.end_y) / 2.0,
+            band_height=160.0,
+        )
+        logger.info(
+            "PersonCounter line dynamically updated | camera_id={cid} | "
+            "line=({sx:.0f},{sy:.0f})→({ex:.0f},{ey:.0f})",
+            cid=self._cam_id_str,
+            sx=counting_line.start_x,
+            sy=counting_line.start_y,
+            ex=counting_line.end_x,
+            ey=counting_line.end_y,
+        )
+
     # ── Lifecycle ─────────────────────────────────────────────────────────────
 
     @property
@@ -468,10 +486,9 @@ class PersonCounterManager:
         cam_id_str = str(camera_id)
         existing = self._workers.get(cam_id_str)
         if existing and existing.is_running:
-            logger.warning(
-                "Worker already running | camera_id={cid}", cid=cam_id_str
-            )
-            return False
+            existing.update_line(counting_line)
+            await self._save_config(camera_id, counting_line, target_fps)
+            return True
 
         worker = PersonCounterWorker(camera_id, counting_line, target_fps)
         self._workers[cam_id_str] = worker

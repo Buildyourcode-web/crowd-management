@@ -73,8 +73,29 @@ async def start_counter(
         )
 
     orientation = "horizontal" if counting_line.is_horizontal else "vertical"
+
+    # Persist updated ROI line to database
+    try:
+        from app.database.connection import AsyncSessionLocal
+        from app.models.roi import ROI
+        from sqlalchemy import select
+        async with AsyncSessionLocal() as session:
+            res_roi = await session.execute(select(ROI).where(ROI.camera_id == camera_id))
+            roi_obj = res_roi.scalar_one_or_none()
+            if roi_obj:
+                roi_obj.polygon = {
+                    "start_x": line_config.start_x,
+                    "start_y": line_config.start_y,
+                    "end_x": line_config.end_x,
+                    "end_y": line_config.end_y,
+                    "orientation": orientation,
+                }
+                await session.commit()
+    except Exception as db_err:
+        logger.warning("Could not persist updated ROI to DB | err={e}", e=db_err)
+
     logger.info(
-        "PersonCounter started via API | camera_id={cid} | "
+        "PersonCounter started/updated via API | camera_id={cid} | "
         "line=({sx:.0f},{sy:.0f})→({ex:.0f},{ey:.0f}) | {orient}",
         cid=camera_id,
         sx=line_config.start_x,
@@ -90,7 +111,7 @@ async def start_counter(
             "line": line_config.model_dump(),
             "orientation": orientation,
         },
-        message=f"Person counter started for camera {camera_id}",
+        message=f"Person counter line updated for camera {camera_id}",
     )
 
 
