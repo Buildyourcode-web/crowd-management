@@ -505,13 +505,13 @@ async def camera_viewer(camera_id: uuid.UUID):
 
   <script>
     const CAMERA_ID = "{camera_id}";
-    const API = "http://127.0.0.1:8000/api/v1";
+    const API = "/api/v1";
 
-    async function fetchStats() {{
-      try {{
-        const res = await fetch(`${{API}}/person-counter/status/${{CAMERA_ID}}`);
+    async function fetchStats() {
+      try {
+        const res = await fetch(`${API}/person-counter/status/${CAMERA_ID}`);
         const json = await res.json();
-        const d = json.data || {{}};
+        const d = json.data || {};
 
         document.getElementById("entry").textContent  = d.entry_count  ?? "—";
         document.getElementById("exit").textContent   = d.exit_count   ?? "—";
@@ -520,18 +520,19 @@ async def camera_viewer(camera_id: uuid.UUID):
         document.getElementById("last-update").textContent = "Last update: " + new Date().toLocaleTimeString();
         document.getElementById("worker-status").textContent =
           "Worker: " + (d.worker_running ? "✅ Running" : "❌ Stopped");
-      }} catch(e) {{
+      } catch(e) {
         document.getElementById("worker-status").textContent = "Worker: ⚠️ API unreachable";
-      }}
-    }}
+      }
+    }
 
     // Poll every 2 seconds
     fetchStats();
     setInterval(fetchStats, 2000);
 
     // WebSocket for instant updates
-    try {{
-      const ws = new WebSocket("ws://127.0.0.1:8000/ws/person_counter");
+    try {
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+      const ws = new WebSocket(`${wsProtocol}${window.location.host}/ws/person_counter`);
       ws.onmessage = (e) => {{
         const msg = JSON.parse(e.data);
         if (msg.payload?.camera_id === CAMERA_ID) {{
@@ -935,7 +936,7 @@ async def zone_viewer(
 
   <script>
     const CAMERA_ID = "{camera_id}";
-    const API = "http://127.0.0.1:8000/api/v1";
+    const API = "/api/v1";
     const ZONE_PARAMS = "{zone_params}";
     const THRESHOLD = {threshold};
 
@@ -1271,7 +1272,7 @@ async def queue_mgmt_viewer(
 </div>
 
 <script>
-const CAM="{cam_id}",API="http://127.0.0.1:8000/api/v1";
+const CAM="{cam_id}",API="/api/v1";
 const HCOL={{"MOVING":"#4ade80","SLOW":"#22d3ee","VERY SLOW":"#f59e0b","BLOCKED":"#f87171","EMPTY":"#9ca3af","UNKNOWN":"#9ca3af"}};
 const BADGE={{"MOVING":["bm","MOVING ▶"],"SLOW":["bs","SLOW ↘"],"VERY SLOW":["bv","VERY SLOW ⚠"],"BLOCKED":["bb","BLOCKED ✖"],"EMPTY":["be","EMPTY"],"UNKNOWN":["be","UNKNOWN"]}};
 
