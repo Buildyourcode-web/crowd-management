@@ -30,7 +30,7 @@ services:
       - "8000:8000"
     environment:
       SECRET_KEY: "010d67237526fbafce54cd1528959fc6441325c1d807bcb00f2f6d54e74e2dec"
-      POSTGRES_HOST: "aws-0-ap-south-1.pooler.supabase.com"
+      POSTGRES_HOST: "aws-1-ap-south-1.pooler.supabase.com"
       POSTGRES_PORT: 6543
       POSTGRES_DB: "postgres"
       POSTGRES_USER: "postgres.mtysplndnfjssgqvomkh"

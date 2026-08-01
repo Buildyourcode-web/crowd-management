@@ -54,6 +54,11 @@ class RedisManager:
             raise RedisConnectionException(detail="Redis client not initialized")
         return self._client
 
+    @property
+    def is_connected(self) -> bool:
+        """True when Redis client is initialized."""
+        return self._client is not None
+
     # ── Health ────────────────────────────────────────────────────────────────
 
     async def ping(self) -> dict:

@@ -214,27 +214,35 @@ async def get_camera_queue_status(camera_id: uuid.UUID) -> ApiResponse:
     """
     Returns live queue metrics for a specific camera.
 
-    **Returns** `404` if no worker has been started for this camera.
+    Returns an idle status (worker_running=false) if no worker has been started,
+    instead of raising a 404, to avoid error spam from frontend polling.
 
     ```json
     {
       "camera_id": "...",
-      "worker_running": true,
-      "people_inside_queue": 18,
-      "queue_length": 18,
-      "queue_status": "MEDIUM",
-      "fps": 4.9,
-      "last_updated": "2026-07-25T00:00:00+00:00"
+      "worker_running": false,
+      "people_inside_queue": 0,
+      "queue_length": 0,
+      "queue_status": "LOW",
+      "fps": 0
     }
     ```
     """
     s = queue_manager.get_status(camera_id)
     if s is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=(
-                f"No queue worker found for camera {camera_id}. "
-                f"Use POST /api/v1/queue/start/{camera_id} first."
-            ),
+        # Return idle payload instead of 404 — the frontend polls this endpoint
+        # continuously; a 404 floods the logs and triggers error UI states.
+        return ApiResponse.ok(
+            data={
+                "camera_id": str(camera_id),
+                "worker_running": False,
+                "people_inside_queue": 0,
+                "queue_length": 0,
+                "queue_status": "LOW",
+                "avg_wait_seconds": None,
+                "fps": 0,
+                "last_updated": None,
+            },
+            message="No queue worker running for this camera",
         )
     return ApiResponse.ok(data=s.model_dump(), message="Queue status retrieved")

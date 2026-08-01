@@ -99,6 +99,10 @@ class QueueWorker:
         self._cam_id_str = str(camera_id)
         self._roi = roi
         self._target_interval: float = 1.0 / max(1, target_fps)
+        self._low_max = low_max
+        self._medium_max = medium_max
+        self._direction = direction
+        self._stabilization_sec = stabilization_sec
 
         # QueueAnalyzer is now stateful (holds ByteTrack + motion history)
         self._analyzer = QueueAnalyzer(
@@ -106,8 +110,6 @@ class QueueWorker:
             direction=direction,
             stabilization_sec=stabilization_sec,
         )
-        self._direction = direction
-        self._stabilization_sec = stabilization_sec
 
         # Level 1 — Occupancy
         self._people_inside: int = 0
@@ -156,6 +158,36 @@ class QueueWorker:
             and self._task is not None
             and not self._task.done()
         )
+
+    @property
+    def roi(self) -> QueueROI:
+        """The ROI this worker monitors."""
+        return self._roi
+
+    @property
+    def direction(self) -> str:
+        """Queue movement direction."""
+        return self._direction
+
+    @property
+    def stabilization_sec(self) -> float:
+        """Seconds before counts stabilize."""
+        return self._stabilization_sec
+
+    @property
+    def target_fps(self) -> int:
+        """Target inference rate in FPS."""
+        return round(1.0 / self._target_interval)
+
+    @property
+    def low_max(self) -> int:
+        """Upper bound for LOW queue status."""
+        return self._low_max
+
+    @property
+    def medium_max(self) -> int:
+        """Upper bound for MEDIUM queue status."""
+        return self._medium_max
 
     async def start(self) -> None:
         """Spawn the background monitoring task (idempotent)."""

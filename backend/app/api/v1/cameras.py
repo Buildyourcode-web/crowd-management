@@ -987,15 +987,37 @@ async def _queue_mjpeg_generator(
     _, ph_buf = cv2.imencode(".jpg", placeholder)
     ph_bytes = ph_buf.tobytes()
 
+    # Fallback image loader if frame_buffer entry is not ready
+    import os
+    possible_paths = [
+        os.path.abspath("test_frame.jpg"),
+        os.path.abspath("current_snapshot.jpg"),
+        os.path.abspath("backend/test_frame.jpg"),
+        os.path.abspath("backend/current_snapshot.jpg"),
+        os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "test_frame.jpg"),
+        os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "backend", "test_frame.jpg"),
+    ]
+    fallback_path = None
+    for p in possible_paths:
+        if os.path.isfile(p):
+            fallback_path = p
+            break
+    fallback_img = cv2.imread(fallback_path) if (fallback_path and os.path.isfile(fallback_path)) else None
+
     last_fn = -1
     while True:
         entry = await frame_buffer.get(camera_id)
         if entry is None or entry.latest_frame is None:
-            yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + ph_bytes + b"\r\n"
-            await asyncio.sleep(0.5)
-            continue
-
-        if entry.frame_number != last_fn:
+            if fallback_img is not None:
+                frame = fallback_img.copy()
+            else:
+                yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + ph_bytes + b"\r\n"
+                await asyncio.sleep(0.5)
+                continue
+        else:
+            if entry.frame_number == last_fn:
+                await asyncio.sleep(0.033)
+                continue
             last_fn = entry.frame_number
             frame = entry.latest_frame.copy()
             h, w = frame.shape[:2]

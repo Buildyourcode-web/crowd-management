@@ -17,6 +17,7 @@ from app.api.v1 import (
     queue,          # Phase 5 — queue management
     zone,           # Phase 6 — zone monitoring
     face,           # Phase 7 — face recognition
+    dashboard,      # Dashboard notification feed
 )
 
 api_v1_router = APIRouter()
@@ -40,4 +41,5 @@ api_v1_router.include_router(person_counter.router, tags=["Person Counter"])
 api_v1_router.include_router(queue.router, tags=["Queue Management"])
 api_v1_router.include_router(zone.router, tags=["Zone Monitoring"])
 api_v1_router.include_router(face.router, tags=["Face Recognition"])
+api_v1_router.include_router(dashboard.router, tags=["Dashboard"])  # notification feed
 

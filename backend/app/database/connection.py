@@ -13,7 +13,22 @@ from sqlalchemy.ext.asyncio import (
 from app.common.exceptions import DatabaseConnectionException
 from app.config.settings import settings
 
+import uuid
+
+
+def _prepared_statement_name_func() -> str:
+    """Generate a unique prepared statement name per query to prevent PgBouncer collisions."""
+    return f"__asyncpg_stmt_{uuid.uuid4().hex}__"
+
+
 # ─── Engine ───────────────────────────────────────────────────────────────────
+
+# PgBouncer (used by Supabase Transaction Pooler) does NOT support asyncpg prepared statement caching
+connect_args = {}
+if "pooler.supabase.com" in settings.POSTGRES_HOST or "supabase.co" in settings.POSTGRES_HOST:
+    connect_args["statement_cache_size"] = 0
+    connect_args["prepared_statement_cache_size"] = 0
+    connect_args["prepared_statement_name_func"] = _prepared_statement_name_func
 
 async_engine = create_async_engine(
     settings.DATABASE_URL,
@@ -22,6 +37,7 @@ async_engine = create_async_engine(
     pool_recycle=settings.POSTGRES_POOL_RECYCLE,
     pool_timeout=settings.POSTGRES_POOL_TIMEOUT,
     pool_pre_ping=True,
+    connect_args=connect_args,
     echo=settings.DEBUG,
     future=True,
 )
@@ -92,6 +108,7 @@ async def connect_db() -> None:
         # Auto-create database tables if not yet created
         async with async_engine.begin() as conn:
             from app.database.base import Base
+            import app.models  # noqa: F401 - Register all ORM models in Base.metadata
             await conn.run_sync(Base.metadata.create_all)
             logger.info("Database tables verified/created successfully")
     except Exception as exc:

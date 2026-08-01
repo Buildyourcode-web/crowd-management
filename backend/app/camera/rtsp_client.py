@@ -78,7 +78,7 @@ class RTSPClient:
                 cap = cv2.VideoCapture(self._rtsp_url)        # default backend for files
             else:
                 import os
-                os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp|fflags;nobuffer|max_delay;500000"
+                os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp|fflags;nobuffer|max_delay;500000|stimeout;2000000|timeout;2000000"
                 cap = cv2.VideoCapture(self._rtsp_url, cv2.CAP_FFMPEG)
                 cap.set(cv2.CAP_PROP_BUFFERSIZE, self._BUFFER_SIZE)
 
