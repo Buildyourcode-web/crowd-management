@@ -430,7 +430,7 @@ async def seed_initial_cameras() -> None:
                 is_active=True,
                 stream_enabled=True,
                 ai_enabled=True,
-                rtsp_url="rtsp://admin:Admin%40123@192.168.1.100:554/cam/realmonitor?channel=15&subtype=1",
+                rtsp_url="rtsp://admin:Admin%40123@192.168.1.100:554/cam/realmonitor?channel=15&subtype=0",
                 resolution="1920x1080",
                 location="Main Gate Exit 4"
             )
