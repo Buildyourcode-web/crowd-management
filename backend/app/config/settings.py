@@ -12,6 +12,7 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore",
+        env_ignore_empty=True,
     )
 
     # ── Application ──────────────────────────────────────────────────────────
@@ -28,11 +29,11 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
 
     # ── PostgreSQL ────────────────────────────────────────────────────────────
-    POSTGRES_HOST: str = "localhost"
+    POSTGRES_HOST: str = "postgres"
     POSTGRES_PORT: int = 5432
     POSTGRES_DB: str = "temple_crowd_db"
     POSTGRES_USER: str = "postgres"
-    POSTGRES_PASSWORD: str = "postgres"
+    POSTGRES_PASSWORD: str = "root"
     POSTGRES_POOL_SIZE: int = 20
     POSTGRES_MAX_OVERFLOW: int = 40
     POSTGRES_POOL_RECYCLE: int = 3600
