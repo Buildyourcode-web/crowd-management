@@ -335,6 +335,7 @@ async def seed_initial_cameras() -> None:
     cam2_id = uuid.UUID('67676767-6767-4e67-a676-676767676767')
     cam3_id = uuid.UUID('33333333-3333-4333-a333-333333333333')
     cam4_id = uuid.UUID('44444444-4444-4444-a444-444444444444')
+    cam5_id = uuid.UUID('55555555-5555-5555-a555-555555555555')
 
     async with AsyncSessionLocal() as session:
         # Check Camera 1
@@ -448,5 +449,37 @@ async def seed_initial_cameras() -> None:
                 is_active=True
             )
             session.add(roi4)
+
+        # Check Camera 5 (Exit Counter)
+        res5 = await session.execute(select(Camera).where(Camera.id == cam5_id))
+        if not res5.scalar_one_or_none():
+            c5 = Camera(
+                id=cam5_id,
+                camera_name="Exit Counter Camera 5 (192.168.1.243)",
+                camera_type=CameraType.EXIT,
+                status=CameraStatus.ONLINE,
+                is_active=True,
+                stream_enabled=True,
+                ai_enabled=True,
+                rtsp_url="rtsp://admin:Admin%40123@192.168.1.243:554/video/live?channel=1&subtype=0",
+                resolution="1920x1080",
+                location="Main Gate Exit 5"
+            )
+            session.add(c5)
+            roi5 = ROI(
+                id=uuid.uuid4(),
+                camera_id=cam5_id,
+                name="Main Exit Counting Line 5",
+                roi_type=ROIType.COUNTING_LINE,
+                polygon={
+                    "start_x": 0.0,
+                    "start_y": 540.0,
+                    "end_x": 1920.0,
+                    "end_y": 540.0,
+                    "orientation": "horizontal"
+                },
+                is_active=True
+            )
+            session.add(roi5)
 
         await session.commit()
