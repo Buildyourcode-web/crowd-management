@@ -77,6 +77,14 @@ async def check_db_health() -> dict:
 
 async def connect_db() -> None:
     """Warm up the connection pool at startup and ensure all DB tables exist."""
+    from app.config.settings import settings
+    logger.info(
+        "Connecting to database | host={h} | port={p} | user={u} | db={d}",
+        h=settings.POSTGRES_HOST,
+        p=settings.POSTGRES_PORT,
+        u=settings.POSTGRES_USER,
+        d=settings.POSTGRES_DB,
+    )
     try:
         health = await check_db_health()
         logger.info("Database connected | {h}", h=health)

@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     POSTGRES_HOST: str = "db.mtysplndnfjssgqvomkh.supabase.co"
     POSTGRES_PORT: int = 5432
     POSTGRES_DB: str = "postgres"
-    POSTGRES_USER: str = "postgres"
+    POSTGRES_USER: str = "postgres"   # plain 'postgres' for direct; 'postgres.xyz' for pooler
     POSTGRES_PASSWORD: str = "Ramkumar@039"
     POSTGRES_POOL_SIZE: int = 20
     POSTGRES_MAX_OVERFLOW: int = 40
@@ -84,14 +84,36 @@ class Settings(BaseSettings):
 
     @property
     def DATABASE_URL(self) -> str:
+        """
+        Build async DSN for SQLAlchemy + asyncpg.
+
+        Supabase direct connection (db.*.supabase.co, port 5432):
+          - username is plain 'postgres' — no dot, no asyncpg parse issue.
+          - SSL is required by Supabase even on direct connections.
+
+        Supabase Transaction Pooler (pooler.supabase.com, port 6543):
+          - username contains a dot (postgres.xyz) which asyncpg misreads
+            as a host override — kept handled but discouraged.
+          - Also requires prepared_statement_cache_size=0 for PgBouncer.
+        """
         import urllib.parse
         encoded_password = urllib.parse.quote_plus(self.POSTGRES_PASSWORD)
+        encoded_user = urllib.parse.quote_plus(self.POSTGRES_USER)
+
+        is_pooler = "pooler.supabase.com" in self.POSTGRES_HOST
+        is_supabase = "supabase.co" in self.POSTGRES_HOST or is_pooler
+
         url = (
-            f"postgresql+asyncpg://{self.POSTGRES_USER}:{encoded_password}"
+            f"postgresql+asyncpg://{encoded_user}:{encoded_password}"
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
-        if "supabase.co" in self.POSTGRES_HOST or "pooler.supabase.com" in self.POSTGRES_HOST:
+
+        if is_supabase:
             url += "?ssl=require"
+            if is_pooler:
+                # PgBouncer does not support prepared statements
+                url += "&prepared_statement_cache_size=0"
+
         return url
 
     @property

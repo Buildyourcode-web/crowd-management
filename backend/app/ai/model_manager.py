@@ -77,11 +77,29 @@ class ModelManager:
 
             # Validate model path
             abs_path = os.path.abspath(self._model_path)
+
+            # ── Detect Git LFS pointer files ──────────────────────────────────
+            # When a .pt file is tracked by Git LFS but not pulled, the file
+            # on disk is a small text file starting with "version https://git-lfs".
+            # PyTorch will fail with "invalid load key, 'v'." when it tries to
+            # load it. Detect this and delete the pointer so we can re-download.
+            if os.path.isfile(abs_path) and os.path.getsize(abs_path) < 1_000_000:
+                try:
+                    with open(abs_path, "rb") as f:
+                        header = f.read(128)
+                    if header.startswith(b"version https://git-lfs"):
+                        logger.warning(
+                            "Model file is a Git LFS pointer — removing and re-downloading | path={p}",
+                            p=abs_path,
+                        )
+                        os.remove(abs_path)
+                except Exception:
+                    pass
+
             if not os.path.isfile(abs_path):
-                logger.error(
-                    "Model file not found | path={p}", p=abs_path
+                logger.warning(
+                    "Model file not found locally — will download | path={p}", p=abs_path
                 )
-                return False
 
             logger.info(
                 "Loading YOLO model | path={p} | device={d}",
@@ -89,12 +107,28 @@ class ModelManager:
                 d=self._device,
             )
 
-            # Load model (with fallback if local file is a Git LFS pointer text file)
+            # Load model — try local file first, then download the correct model
             try:
-                self._model = YOLO(abs_path)
+                if os.path.isfile(abs_path):
+                    self._model = YOLO(abs_path)
+                else:
+                    # Download the correct model (e.g. yolo11x.pt) by name
+                    logger.info(
+                        "Downloading model | name={n}", n=self._model_name
+                    )
+                    self._model = YOLO(self._model_name)
+                    # Save to the expected path for future runs
+                    try:
+                        import shutil
+                        downloaded = os.path.abspath(self._model_name)
+                        if os.path.isfile(downloaded) and downloaded != abs_path:
+                            os.makedirs(os.path.dirname(abs_path), exist_ok=True)
+                            shutil.move(downloaded, abs_path)
+                    except Exception as mv_err:
+                        logger.warning("Could not move downloaded model: {e}", e=mv_err)
             except Exception as load_err:
                 logger.warning(
-                    "Local model loading failed ({err}) — downloading standard yolo11n.pt model...",
+                    "Model loading failed ({err}) — falling back to yolo11n.pt",
                     err=str(load_err),
                 )
                 self._model = YOLO("yolo11n.pt")
