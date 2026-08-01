@@ -373,7 +373,7 @@ async def seed_initial_cameras() -> None:
                 status=CameraStatus.ONLINE,
                 is_active=True,
                 stream_enabled=True,
-                rtsp_url="rtsp://admin:cctv%40321@192.168.1.65:554/Streaming/Channels/101",
+                rtsp_url="rtsp://admin:cctv%40321@192.168.1.65:554/Streaming/Channels/102",
                 location="Main Queue Pathway 2"
             )
             session.add(c2)
@@ -398,7 +398,7 @@ async def seed_initial_cameras() -> None:
                 is_active=True,
                 stream_enabled=True,
                 ai_enabled=True,
-                rtsp_url="rtsp://admin:Admin%40123@192.168.1.100:554/cam/realmonitor?channel=13&subtype=0",
+                rtsp_url="rtsp://admin:Admin%40123@192.168.1.100:554/cam/realmonitor?channel=13&subtype=1",
                 resolution="2560x1440",
                 location="Main Gate Entrance 3"
             )
