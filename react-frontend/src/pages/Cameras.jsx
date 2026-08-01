@@ -197,6 +197,16 @@ export default function Cameras() {
       };
     }
 
+    if (idx === 5) {
+      return {
+        id: '66666666-6666-6666-a666-666666666666',
+        name: 'Person Counter Camera 6',
+        stream_url: '/api/v1/cameras/66666666-6666-6666-a666-666666666666/stream',
+        zone_name: 'Main Gate Entrance 6',
+        camera_type: 'ENTRY',
+      };
+    }
+
     if (existing) return existing;
 
     return {

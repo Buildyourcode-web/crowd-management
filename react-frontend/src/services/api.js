@@ -65,6 +65,15 @@ export async function fetchDashboardData() {
             status: cam5Status.worker_running ? 'normal' : 'warning',
           });
         }
+        const cam6Status = pcRes.data.data.cameras.find(c => String(c.camera_id).includes('66666666'));
+        if (cam6Status) {
+          gatesList.push({
+            gate_number: 'Gate 6',
+            entries: cam6Status.entry_count || 0,
+            exits: cam6Status.exit_count || 0,
+            status: cam6Status.worker_running ? 'normal' : 'warning',
+          });
+        }
         if (gatesList.length > 0) {
           data.gates = gatesList;
         }

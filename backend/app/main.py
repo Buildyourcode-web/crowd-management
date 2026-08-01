@@ -336,6 +336,7 @@ async def seed_initial_cameras() -> None:
     cam3_id = uuid.UUID('33333333-3333-4333-a333-333333333333')
     cam4_id = uuid.UUID('44444444-4444-4444-a444-444444444444')
     cam5_id = uuid.UUID('55555555-5555-5555-a555-555555555555')
+    cam6_id = uuid.UUID('66666666-6666-6666-a666-666666666666')
 
     async with AsyncSessionLocal() as session:
         # Check Camera 1
@@ -481,5 +482,37 @@ async def seed_initial_cameras() -> None:
                 is_active=True
             )
             session.add(roi5)
+
+        # Check Camera 6 (Person Counter)
+        res6 = await session.execute(select(Camera).where(Camera.id == cam6_id))
+        if not res6.scalar_one_or_none():
+            c6 = Camera(
+                id=cam6_id,
+                camera_name="Person Counter Camera 6 (192.168.1.100 ch12)",
+                camera_type=CameraType.ENTRY,
+                status=CameraStatus.ONLINE,
+                is_active=True,
+                stream_enabled=True,
+                ai_enabled=True,
+                rtsp_url="rtsp://admin:Admin%40123@192.168.1.100:554/cam/realmonitor?channel=12&subtype=0",
+                resolution="1920x1080",
+                location="Main Gate Entrance 6"
+            )
+            session.add(c6)
+            roi6 = ROI(
+                id=uuid.uuid4(),
+                camera_id=cam6_id,
+                name="Main Entrance Counting Line 6",
+                roi_type=ROIType.COUNTING_LINE,
+                polygon={
+                    "start_x": 0.0,
+                    "start_y": 540.0,
+                    "end_x": 1920.0,
+                    "end_y": 540.0,
+                    "orientation": "horizontal"
+                },
+                is_active=True
+            )
+            session.add(roi6)
 
         await session.commit()
