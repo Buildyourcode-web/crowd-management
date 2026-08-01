@@ -1,6 +1,6 @@
 """Application settings loaded from environment variables via pydantic-settings."""
 from functools import lru_cache
-from typing import List
+from typing import List, Union
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -48,9 +48,9 @@ class Settings(BaseSettings):
     REDIS_SOCKET_CONNECT_TIMEOUT: int = 5
 
     # ── CORS ──────────────────────────────────────────────────────────────────
-    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8080"]
-    ALLOWED_METHODS: List[str] = ["*"]
-    ALLOWED_HEADERS: List[str] = ["*"]
+    ALLOWED_ORIGINS: Union[List[str], str] = ["*"]
+    ALLOWED_METHODS: Union[List[str], str] = ["*"]
+    ALLOWED_HEADERS: Union[List[str], str] = ["*"]
     ALLOW_CREDENTIALS: bool = True
 
     # ── Logging ───────────────────────────────────────────────────────────────
@@ -104,7 +104,14 @@ class Settings(BaseSettings):
     @classmethod
     def parse_list_from_string(cls, v: object) -> object:
         if isinstance(v, str):
-            return [item.strip() for item in v.split(",")]
+            v_str = v.strip()
+            if v_str.startswith("[") and v_str.endswith("]"):
+                try:
+                    import json
+                    return json.loads(v_str)
+                except Exception:
+                    pass
+            return [item.strip() for item in v_str.split(",") if item.strip()]
         return v
 
 

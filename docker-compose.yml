@@ -57,7 +57,7 @@ services:
       REDIS_PORT: 6379
       ENVIRONMENT: production
       DEBUG: "false"
-      ALLOWED_ORIGINS: "*"
+      ALLOWED_ORIGINS: '["*"]'
     volumes:
       - ./backend/models:/app/models
       - ./backend/logs:/app/logs
