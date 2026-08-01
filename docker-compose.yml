@@ -14,7 +14,7 @@ services:
     environment:
       POSTGRES_DB: temple_crowd_db
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres_secure_password
+      POSTGRES_PASSWORD: root
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -52,7 +52,7 @@ services:
       POSTGRES_PORT: 5432
       POSTGRES_DB: temple_crowd_db
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres_secure_password
+      POSTGRES_PASSWORD: root
       REDIS_HOST: redis
       REDIS_PORT: 6379
       ENVIRONMENT: production
