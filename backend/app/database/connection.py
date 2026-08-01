@@ -87,8 +87,7 @@ async def connect_db() -> None:
             await conn.run_sync(Base.metadata.create_all)
             logger.info("Database tables verified/created successfully")
     except Exception as exc:
-        logger.critical("Cannot reach database on startup: {e}", e=str(exc))
-        raise
+        logger.warning("Database connection unavailable at startup — running in DEGRADED mode. Error: {e}", e=str(exc))
 
 
 async def disconnect_db() -> None:
