@@ -39,8 +39,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         env=settings.ENVIRONMENT,
     )
 
-    # Connect to PostgreSQL
+    # Connect to PostgreSQL and create/verify tables
     await connect_db()
+    try:
+        await seed_initial_cameras()
+    except Exception as seed_exc:
+        logger.warning("Auto camera seeding skipped | err={e}", e=str(seed_exc))
 
     # Connect to Redis (non-fatal — app starts in degraded mode without Redis)
     try:
@@ -302,3 +306,100 @@ def create_application() -> FastAPI:
 
 # Application instance
 app: FastAPI = create_application()
+
+
+async def seed_initial_cameras() -> None:
+    """Ensure Camera 1, Camera 2, and Camera 3 and their ROIs exist in DB automatically."""
+    import uuid
+    from app.database.connection import AsyncSessionLocal
+    from app.models.camera import Camera
+    from app.models.roi import ROI
+    from app.common.enums import CameraType, CameraStatus, ROIType
+    from sqlalchemy import select
+
+    cam1_id = uuid.UUID('4e09b542-98b1-4974-9e6c-8f3a8c3d7f0a')
+    cam2_id = uuid.UUID('67676767-6767-4e67-a676-676767676767')
+    cam3_id = uuid.UUID('33333333-3333-4333-a333-333333333333')
+
+    async with AsyncSessionLocal() as session:
+        # Check Camera 1
+        res1 = await session.execute(select(Camera).where(Camera.id == cam1_id))
+        if not res1.scalar_one_or_none():
+            c1 = Camera(
+                id=cam1_id,
+                camera_name="Queue Monitor 1 (192.168.1.78)",
+                camera_type=CameraType.QUEUE,
+                status=CameraStatus.ONLINE,
+                is_active=True,
+                stream_enabled=True,
+                rtsp_url="rtsp://admin:cctv%40321@192.168.1.78:554/Streaming/Channels/101",
+                location="Main Queue Pathway 1"
+            )
+            session.add(c1)
+            roi1 = ROI(
+                id=uuid.uuid4(),
+                camera_id=cam1_id,
+                name="Queue Walkway ROI 1",
+                roi_type=ROIType.POLYGON_ZONE,
+                polygon={"x1": 1000, "y1": 120, "x2": 1820, "y2": 1080},
+                is_active=True
+            )
+            session.add(roi1)
+
+        # Check Camera 2
+        res2 = await session.execute(select(Camera).where(Camera.id == cam2_id))
+        if not res2.scalar_one_or_none():
+            c2 = Camera(
+                id=cam2_id,
+                camera_name="Queue Monitor 2 (192.168.1.67)",
+                camera_type=CameraType.QUEUE,
+                status=CameraStatus.ONLINE,
+                is_active=True,
+                stream_enabled=True,
+                rtsp_url="rtsp://admin:cctv%40321@192.168.1.67:554/Streaming/Channels/101",
+                location="Main Queue Pathway 2"
+            )
+            session.add(c2)
+            roi2 = ROI(
+                id=uuid.uuid4(),
+                camera_id=cam2_id,
+                name="Queue Walkway ROI 2",
+                roi_type=ROIType.POLYGON_ZONE,
+                polygon={"x1": 450, "y1": 200, "x2": 1650, "y2": 980},
+                is_active=True
+            )
+            session.add(roi2)
+
+        # Check Camera 3
+        res3 = await session.execute(select(Camera).where(Camera.id == cam3_id))
+        if not res3.scalar_one_or_none():
+            c3 = Camera(
+                id=cam3_id,
+                camera_name="Entry Counter Camera 3 (192.168.1.100)",
+                camera_type=CameraType.ENTRY,
+                status=CameraStatus.ONLINE,
+                is_active=True,
+                stream_enabled=True,
+                ai_enabled=True,
+                rtsp_url="rtsp://admin:Admin%40123@192.168.1.100:554/cam/realmonitor?channel=13&subtype=0",
+                resolution="2560x1440",
+                location="Main Gate Entrance 3"
+            )
+            session.add(c3)
+            roi3 = ROI(
+                id=uuid.uuid4(),
+                camera_id=cam3_id,
+                name="Main Entrance Counting Line 3",
+                roi_type=ROIType.COUNTING_LINE,
+                polygon={
+                    "start_x": 0.0,
+                    "start_y": 720.0,
+                    "end_x": 2560.0,
+                    "end_y": 720.0,
+                    "orientation": "horizontal"
+                },
+                is_active=True
+            )
+            session.add(roi3)
+
+        await session.commit()

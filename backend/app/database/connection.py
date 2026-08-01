@@ -76,10 +76,16 @@ async def check_db_health() -> dict:
 # ─── Lifecycle Hooks ──────────────────────────────────────────────────────────
 
 async def connect_db() -> None:
-    """Warm up the connection pool at startup."""
+    """Warm up the connection pool at startup and ensure all DB tables exist."""
     try:
         health = await check_db_health()
         logger.info("Database connected | {h}", h=health)
+
+        # Auto-create database tables if not yet created
+        async with async_engine.begin() as conn:
+            from app.database.base import Base
+            await conn.run_sync(Base.metadata.create_all)
+            logger.info("Database tables verified/created successfully")
     except Exception as exc:
         logger.critical("Cannot reach database on startup: {e}", e=str(exc))
         raise
