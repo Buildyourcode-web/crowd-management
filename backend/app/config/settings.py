@@ -78,8 +78,8 @@ class Settings(BaseSettings):
     DEFAULT_ALERT_INTERVAL: int = 300
 
     # ── AI / YOLO ─────────────────────────────────────────────────────────────
-    AI_MODEL_PATH: str = "models/yolo11x.pt"   # relative to CWD or absolute
-    AI_MODEL_NAME: str = "yolo11x.pt"
+    AI_MODEL_PATH: str = "models/yolo11m.pt"   # relative to CWD or absolute
+    AI_MODEL_NAME: str = "yolo11m.pt"
     AI_DEVICE: str = "auto"                     # "auto" | "cuda" | "cpu"
 
     @property
