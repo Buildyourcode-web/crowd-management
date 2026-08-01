@@ -29,7 +29,8 @@ services:
     ports:
       - "8000:8000"
     environment:
-      SUPABASE_DATABASE_URL: "postgresql://postgres:Ramkumar%40039@db.mtysplndnfjssgqvomkh.supabase.co:5432/postgres"
+      SECRET_KEY: "010d67237526fbafce54cd1528959fc6441325c1d807bcb00f2f6d54e74e2dec"
+      SUPABASE_DATABASE_URL: "postgresql://postgres:MySupabasePass2026@db.vedrsfqvqvgnsrlrrblq.supabase.co:5432/postgres"
       REDIS_HOST: redis
       REDIS_PORT: 6379
       ENVIRONMENT: production
